@@ -1,5 +1,5 @@
 '''
-Individual stages of the pipeline implented as functions from
+Individual stages of the pipeline implemented as functions from
 input files to output files.
 '''
 

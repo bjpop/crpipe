@@ -1,5 +1,5 @@
 '''
-Run a pipeline state either locally or on the cluster,
+Run a pipeline stage either locally or on the cluster,
 taking into account the configuration settings,
 and command line options of the pipeline.
 '''

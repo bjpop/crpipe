@@ -2,8 +2,8 @@
 Build the pipeline workflow by plumbing the stages together.
 '''
 
-from ruffus import *
-from stages import make_stage, fastqc
+from ruffus import Pipeline, suffix
+from stages import make_stage, fastqc, index_reference_bwa, index_reference_samtools
 
 
 def make_pipeline(config, runner):
@@ -11,12 +11,26 @@ def make_pipeline(config, runner):
     # Build an empty pipeline
     pipeline = Pipeline(name="crpipe")
     # Get a list of paths to all the FASTQ files
-    fastq_paths = config.get_option('fastqs')
+    fastq_files = config.get_option('fastqs')
 
     # Run fastQC on the FASTQ files
     pipeline.transform(task_func=make_stage(runner, fastqc),
-        input=fastq_paths,
+        input=fastq_files,
         filter=suffix('.fastq.gz'),
         output='_fastqc')
+
+    reference_file = config.get_option('reference')
+
+    # Index the reference using BWA 
+    pipeline.transform(task_func=make_stage(runner, index_reference_bwa),
+        input=reference_file,
+        filter=suffix('.fa'),
+        output=['.amb', '.ann', '.pac'])
+    
+    # Index the reference using samtools 
+    pipeline.transform(task_func=make_stage(runner, index_reference_samtools),
+        input=reference_file,
+        filter=suffix('.fa'),
+        output='.fai')
 
     return pipeline

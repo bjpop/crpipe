@@ -14,10 +14,24 @@ def make_stage(runner, function):
     The runner knows everything about submitting jobs and has full access to
     the state of the pipeline, such as config, options, DRMAA and the logger.
     '''
-    return lambda input, output: function(runner, input, output)
+    closure = lambda input, output: function(runner, input, output)
+    # Hack to make the closure have the same name as the input function.
+    # Ruffus uses the func_name property to identify stages.
+    closure.func_name = function.func_name
+    return closure 
 
-def fastqc(runner, fastq, outdir):
+def fastqc(runner, fastq_in, dir_out):
     '''Quality check fastq file using fastqc'''
-    safe_make_dir(outdir)
-    command = "fastqc --quiet -o {outdir} {fastq}".format(outdir=outdir, fastq=fastq)
+    safe_make_dir(dir_out)
+    command = "fastqc --quiet -o {dir} {fastq}".format(dir=dir_out, fastq=fastq_in)
     runner.run_stage('fastqc', command)
+
+def index_reference_bwa(runner, reference_in, index_file_out):
+    '''Index the reference genome using BWA'''
+    command = "bwa index -a bwtsw {ref}".format(ref=reference_in)
+    runner.run_stage('index_reference_bwa', command)
+
+def index_reference_samtools(runner, reference_in, index_file_out):
+    '''Index the reference genome using samtools'''
+    command = "samtools faidx {ref}".format(ref=reference_in)
+    runner.run_stage('index_reference_samtools', command)

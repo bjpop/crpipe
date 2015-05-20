@@ -7,10 +7,10 @@ setup(
     version='0.0.1',
     author='Bernie Pope',
     author_email='bjpope@unimelb.edu.au',
-    packages=['crpipe'],
-    package_data={'crpipe': ['examples/*.py']},
+    packages=['src'],
+    # package_data={'crpipe': ['examples/*.py']},
     entry_points={
-        'console_scripts': ['crpipe = crpipe.main:main']
+        'console_scripts': ['crpipe = src.main:main']
     },
     url='https://github.com/bjpop/crpipe',
     license='LICENSE.txt',

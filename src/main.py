@@ -14,28 +14,13 @@ from config import Config
 from state import State
 from logger import Logger
 from runner import Runner
-from stages import make_stage, fastqc
+from pipeline import make_pipeline
 
 # default place to save cluster job scripts
 # (mostly useful for post-mortem debugging)
 DEFAULT_JOBSCRIPT_DIR = 'jobscripts'
 # default name of the pipeline configuration file
 DEFAULT_CONFIG_FILE = 'pipeline.config'
-
-def make_pipeline(config, runner):
-    '''Build the pipeline by constructing stages and connecting them together'''
-    # Build an empty pipeline
-    pipeline = Pipeline(name="crpipe")
-    # Get a list of paths to all the FASTQ files
-    fastq_paths = config.get_option('fastqs')
-
-    # Run fastQC on the FASTQ files
-    pipeline.transform(task_func=make_stage(runner, fastqc),
-        input=fastq_paths,
-        filter=suffix('.fastq.gz'),
-        output='_fastqc')
-
-    return pipeline
 
 
 def parse_command_line():

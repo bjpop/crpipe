@@ -2,8 +2,9 @@
 Build the pipeline workflow by plumbing the stages together.
 '''
 
-from ruffus import Pipeline, suffix
-from stages import make_stage, fastqc, index_reference_bwa, index_reference_samtools
+from ruffus import Pipeline, suffix, formatter, add_inputs
+from stages import (make_stage, fastqc, index_reference_bwa, 
+    index_reference_samtools, align_bwa)
 
 
 def make_pipeline(config, state):
@@ -45,7 +46,18 @@ def make_pipeline(config, state):
     # Align paired end reads in FASTQ to the reference producing a BAM file
     pipeline.transform(task_func=make_stage(state, align_bwa),
         input=fastq_files,
-        filter=...
-        output=...)
+        # Match the R1 (read 1) FASTQ file and grab the path and sample name. 
+        # This will be the first input to the stage.
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+)_R1.fastq.gz'),
+        # Add two more inputs to the stage:
+        #    1. The corresponding R2 FASTQ file
+        #    2. The reference genome file
+        add_inputs=add_inputs(['{path[0]}/{sample[0]}_R2.fastq.gz', reference_file]),
+        # Add an "extra" argument to the state (beyond the inputs and outputs)
+        # which is the sample name. This is needed within the stage for finding out
+        # sample specific configuration options
+        extras=['{sample[0]}'],
+        # The output file name is the sample name with a .bam extension.
+        output='{path[0]}/{sample[0]}.bam')
 
     return pipeline

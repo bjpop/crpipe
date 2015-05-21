@@ -41,13 +41,15 @@ def run_stage(state, stage, command):
     queue = config.get_stage_option(stage, 'queue')
     walltime = config.get_stage_option(stage, 'walltime')
     run_local = config.get_stage_option(stage, 'local')
+    cores = config.get_stage_option(stage, 'cores')
 
     # Generate a "module load" command for each required module
     module_loads = '\n'.join(['module load ' + module for module in modules])
     cluster_command = '\n'.join([module_loads, command])
 
     # Specify job-specific options for SLURM
-    job_options = '--time={} --mem={} --partition={} --account={}'.format(walltime, mem, queue, account)
+    job_options = '--nodes=1 --ntasks-per-node={cores} --ntasks={cores} --time={time} --mem={mem} --partition={queue} --account={account}' \
+                      .format(cores=cores, time=walltime, mem=mem, queue=queue, account=account)
 
     # Log a message about the job we are about to run
     log_messages = ['Running stage: {}'.format(stage),

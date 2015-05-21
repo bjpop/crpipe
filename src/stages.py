@@ -17,7 +17,7 @@ def make_stage(state, function):
     3 arguments due to the need to pass the state as a parameter.
     This avoids making the state a global variable.
     '''
-    closure = lambda input, output: function(state, input, output)
+    closure = lambda input, output, *extras: function(state, input, output, *extras)
     # Hack to make the closure have the same name as the input function.
     # Ruffus uses the func_name property to identify stages.
     closure.func_name = function.func_name
@@ -46,16 +46,21 @@ def index_reference_samtools(reference_in, index_file_out, state):
     runner.run_stage('index_reference_samtools', command)
 '''
 
-def align_bwa(state, inputs, bam_out):
+def align_bwa(state, inputs, bam_out, sample):
     '''Align the paired end fastq files to the reference genome using bwa'''
-    fastq_read1_in, fastq_read2_in, reference_in = inputs
-    sample = ...
+    fastq_read1_in, [fastq_read2_in, reference_in] = inputs
+    # Get the read group information for this sample from the configuration file
     read_group = state.config.get_read_group(sample)
-    command = "bwa aln ... -M -R {read_group} {fastq_read1} {fastq_read2} " \
-              "{reference} | samtools view -b > {bam}" \
-              .format(read_group=read_group,
-                   fastq_read1=fastq_read1_in,
-                   fastq_read2=fastq_read2_in,
-                   reference=reference_in,
-                   bam=bam_out)
-    run_stage('align_bwa', command)
+    # Get the number of cores to request for the job, this translates into the
+    # number of threads to give to bwa's -t option
+    cores = state.config.get_stage_option('align_bwa', 'cores')
+    # Run bwa and pipe the output through samtools view to generate a BAM file
+    command = 'bwa mem -t {cores} -R "{read_group}" {reference} {fastq_read1} {fastq_read2} ' \
+              '| samtools view -S -b - > {bam}' \
+              .format(cores=cores,
+                  read_group=read_group,
+                  fastq_read1=fastq_read1_in,
+                  fastq_read2=fastq_read2_in,
+                  reference=reference_in,
+                  bam=bam_out)
+    run_stage(state, 'align_bwa', command)

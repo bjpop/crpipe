@@ -13,7 +13,6 @@ import sys
 from config import Config
 from state import State
 from logger import Logger
-from runner import Runner
 from pipeline import make_pipeline
 
 # default place to save cluster job scripts
@@ -51,9 +50,8 @@ def main():
     config = Config(options.config)
     state = State(options=options, config=config, logger=logger,
                   drmaa_session=drmaa_session)
-    runner = Runner(state)
     # Build the pipeline workflow
-    pipeline = make_pipeline(config, runner)
+    pipeline = make_pipeline(config, state)
     # Run (or print) the pipeline
     cmdline.run(options)
     # Shut down the DRMAA session

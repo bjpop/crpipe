@@ -31,54 +31,45 @@ SLURM options:
                         (any state change)
 '''
 
-class Runner(object):
-    def __init__(self, state):
-        # State contains:
-        #    - command line options
-        #    - configuration options
-        #    - logger
-        #    - DRMAA session
-        self.state = state
+def run_stage(state, stage, command):
 
-    def run_stage(self, stage, command):
+    # Grab the configuration options for this stage
+    config = state.config
+    modules = config.get_stage_option(stage, 'modules')
+    mem = config.get_stage_option(stage, 'mem') * MEGABYTES_IN_GIGABYTE 
+    account = config.get_stage_option(stage, 'account')
+    queue = config.get_stage_option(stage, 'queue')
+    walltime = config.get_stage_option(stage, 'walltime')
+    run_local = config.get_stage_option(stage, 'local')
 
-        # Grab the configuration options for this stage
-        config = self.state.config
-        modules = config.get_stage_option(stage, 'modules')
-        mem = config.get_stage_option(stage, 'mem') * MEGABYTES_IN_GIGABYTE 
-        account = config.get_stage_option(stage, 'account')
-        queue = config.get_stage_option(stage, 'queue')
-        walltime = config.get_stage_option(stage, 'walltime')
-        run_local = config.get_stage_option(stage, 'local')
-    
-        # Generate a "module load" command for each required module
-        module_loads = '\n'.join(['module load ' + module for module in modules])
-        cluster_command = '\n'.join([module_loads, command])
-    
-        # Specify job-specific options for SLURM
-        job_options = '--time={} --mem={} --partition={} --account={}'.format(walltime, mem, queue, account)
+    # Generate a "module load" command for each required module
+    module_loads = '\n'.join(['module load ' + module for module in modules])
+    cluster_command = '\n'.join([module_loads, command])
 
-        # Log a message about the job we are about to run
-        log_messages = ['Running stage: {}'.format(stage),
-                        'Command: {}'.format(command)]
-        if not run_local:
-            log_messages.append('Job options: {}'.format(job_options))
-        self.state.logger.info('\n'.join(log_messages))
-    
-        # Run the job, capturing stdout and stderr
-        stdout_res, stderr_res = None, None
-        try:
-            stdout_res, stderr_res = \
-                run_job(cmd_str=cluster_command,
-                    job_name = stage,
-                    logger = self.state.logger.proxy,
-                    drmaa_session = self.state.drmaa_session,
-                    # Determines whether to run the command on the local
-                    # machine or run it on the cluster
-                    run_locally = run_local,
-                    # Keep a copy of the job script for diagnostic purposes
-                    retain_job_scripts = True,
-                    job_script_directory = self.state.options.jobscripts, 
-                    job_other_options = job_options)
-        except error_drmaa_job as err:
-            raise Exception("\n".join(map(str, ["Failed to run:", command, err, stdout_res, stderr_res])))
+    # Specify job-specific options for SLURM
+    job_options = '--time={} --mem={} --partition={} --account={}'.format(walltime, mem, queue, account)
+
+    # Log a message about the job we are about to run
+    log_messages = ['Running stage: {}'.format(stage),
+                    'Command: {}'.format(command)]
+    if not run_local:
+        log_messages.append('Job options: {}'.format(job_options))
+    state.logger.info('\n'.join(log_messages))
+
+    # Run the job, capturing stdout and stderr
+    stdout_res, stderr_res = None, None
+    try:
+        stdout_res, stderr_res = \
+            run_job(cmd_str=cluster_command,
+                job_name = stage,
+                logger = state.logger.proxy,
+                drmaa_session = state.drmaa_session,
+                # Determines whether to run the command on the local
+                # machine or run it on the cluster
+                run_locally = run_local,
+                # Keep a copy of the job script for diagnostic purposes
+                retain_job_scripts = True,
+                job_script_directory = state.options.jobscripts, 
+                job_other_options = job_options)
+    except error_drmaa_job as err:
+        raise Exception("\n".join(map(str, ["Failed to run:", command, err, stdout_res, stderr_res])))

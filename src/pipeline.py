@@ -25,12 +25,12 @@ def make_pipeline(config, runner):
     pipeline.transform(task_func=make_stage(runner, index_reference_bwa),
         input=reference_file,
         filter=suffix('.fa'),
-        output=['.amb', '.ann', '.pac'])
+        output=['.fa.amb', '.fa.ann', '.fa.pac', '.fa.sa', '.fa.bwt'])
     
     # Index the reference using samtools 
     pipeline.transform(task_func=make_stage(runner, index_reference_samtools),
         input=reference_file,
         filter=suffix('.fa'),
-        output='.fai')
+        output='.fa.fai')
 
     return pipeline

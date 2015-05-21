@@ -50,3 +50,30 @@ class Config(object):
         else:
             # Stage does not exist in the config file
             raise Exception("Unknown stage: {}, not in configuration file: {}".format(stage, self.config_filename))
+
+    def validate(self):
+        '''Check that the configuration is valid.'''
+   
+        config = self.config
+        filename = self.config_filename
+        
+        # Test for required fields: defaults, stages, fastqs, read_groups
+        check_required_field(config, filename, 'defaults')
+        check_required_field(config, filename, 'stages')
+        check_required_field(config, filename, 'fastqs')
+        check_required_field(config, filename, 'read_groups')
+
+    def get_read_group(self, sample):
+        '''Get the read group information for a given sample'''
+        config = self.config
+        filename = self.config_filename
+        # This is already validated to exist
+        read_groups = config['read_groups']
+        if sample in read_groups:
+            return read_groups[sample]
+        else:
+            raise Exception("Configuration file {} does not have read group for sample {}".format(filename, sample))
+
+def check_required_field(config, filename, field):
+    if field  not in config:
+        raise Exception("Configuration file {} does not have '{}' field".format(filename, field))

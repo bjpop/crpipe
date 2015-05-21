@@ -3,8 +3,8 @@ Individual stages of the pipeline implemented as functions from
 input files to output files.
 
 The run_stage function knows everything about submitting jobs and, given
-the state parameter, has full access to
-the state of the pipeline, such as config, options, DRMAA and the logger.
+the state parameter, has full access to the state of the pipeline, such 
+as config, options, DRMAA and the logger.
 '''
 
 from utils import safe_make_dir
@@ -45,3 +45,17 @@ def index_reference_samtools(reference_in, index_file_out, state):
     command = "samtools faidx {ref}".format(ref=reference_in)
     runner.run_stage('index_reference_samtools', command)
 '''
+
+def align_bwa(state, inputs, bam_out):
+    '''Align the paired end fastq files to the reference genome using bwa'''
+    fastq_read1_in, fastq_read2_in, reference_in = inputs
+    sample = ...
+    read_group = state.config.get_read_group(sample)
+    command = "bwa aln ... -M -R {read_group} {fastq_read1} {fastq_read2} " \
+              "{reference} | samtools view -b > {bam}" \
+              .format(read_group=read_group,
+                   fastq_read1=fastq_read1_in,
+                   fastq_read2=fastq_read2_in,
+                   reference=reference_in,
+                   bam=bam_out)
+    run_stage('align_bwa', command)

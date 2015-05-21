@@ -48,6 +48,7 @@ def main():
     drmaa_session.initialize()
     # Parse the configuration file, and initialise global state
     config = Config(options.config)
+    config.validate()
     state = State(options=options, config=config, logger=logger,
                   drmaa_session=drmaa_session)
     # Build the pipeline workflow

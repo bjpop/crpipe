@@ -42,4 +42,10 @@ def make_pipeline(config, state):
         extras=[state])
     '''
 
+    # Align paired end reads in FASTQ to the reference producing a BAM file
+    pipeline.transform(task_func=make_stage(state, align_bwa),
+        input=fastq_files,
+        filter=...
+        output=...)
+
     return pipeline

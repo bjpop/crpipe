@@ -10,57 +10,41 @@ as config, options, DRMAA and the logger.
 from utils import safe_make_dir
 from runner import run_stage
 
-def make_stage(state, function):
-    '''Convenience wrapper to build an arity 2 function from a stage function.
-    This just makes a closure which is closed over the state paramater.
-    Ruffus stages should be functions with 2 arguments, but our functions have
-    3 arguments due to the need to pass the state as a parameter.
-    This avoids making the state a global variable.
-    '''
-    closure = lambda input, output, *extras: function(state, input, output, *extras)
-    # Hack to make the closure have the same name as the input function.
-    # Ruffus uses the func_name property to identify stages.
-    closure.func_name = function.func_name
-    return closure 
+class Stages(object):
+    def __init__(self, state):
+        self.state = state
 
-def fastqc(state, fastq_in, dir_out):
-    '''Quality check fastq file using fastqc'''
-    safe_make_dir(dir_out)
-    command = "fastqc --quiet -o {dir} {fastq}".format(dir=dir_out, fastq=fastq_in)
-    run_stage(state, 'fastqc', command)
-
-def index_reference_bwa(state, reference_in, index_file_out):
-    '''Index the reference genome using BWA'''
-    command = "bwa index -a bwtsw {ref}".format(ref=reference_in)
-    run_stage(state, 'index_reference_bwa', command)
-
-def index_reference_samtools(state, reference_in, index_file_out):
-    '''Index the reference genome using samtools'''
-    command = "samtools faidx {ref}".format(ref=reference_in)
-    run_stage(state, 'index_reference_samtools', command)
-
-'''
-Could write like so by passing state in extra parameters
-def index_reference_samtools(reference_in, index_file_out, state):
-    command = "samtools faidx {ref}".format(ref=reference_in)
-    runner.run_stage('index_reference_samtools', command)
-'''
-
-def align_bwa(state, inputs, bam_out, sample):
-    '''Align the paired end fastq files to the reference genome using bwa'''
-    fastq_read1_in, [fastq_read2_in, reference_in] = inputs
-    # Get the read group information for this sample from the configuration file
-    read_group = state.config.get_read_group(sample)
-    # Get the number of cores to request for the job, this translates into the
-    # number of threads to give to bwa's -t option
-    cores = state.config.get_stage_option('align_bwa', 'cores')
-    # Run bwa and pipe the output through samtools view to generate a BAM file
-    command = 'bwa mem -t {cores} -R "{read_group}" {reference} {fastq_read1} {fastq_read2} ' \
-              '| samtools view -S -b - > {bam}' \
-              .format(cores=cores,
-                  read_group=read_group,
-                  fastq_read1=fastq_read1_in,
-                  fastq_read2=fastq_read2_in,
-                  reference=reference_in,
-                  bam=bam_out)
-    run_stage(state, 'align_bwa', command)
+    def fastqc(self, fastq_in, dir_out):
+        '''Quality check fastq file using fastqc'''
+        safe_make_dir(dir_out)
+        command = "fastqc --quiet -o {dir} {fastq}".format(dir=dir_out, fastq=fastq_in)
+        run_stage(self.state, 'fastqc', command)
+    
+    def index_reference_bwa(self, reference_in, index_file_out):
+        '''Index the reference genome using BWA'''
+        command = "bwa index -a bwtsw {ref}".format(ref=reference_in)
+        run_stage(self.state, 'index_reference_bwa', command)
+    
+    def index_reference_samtools(self, reference_in, index_file_out):
+        '''Index the reference genome using samtools'''
+        command = "samtools faidx {ref}".format(ref=reference_in)
+        run_stage(self.state, 'index_reference_samtools', command)
+    
+    def align_bwa(self, inputs, bam_out, sample):
+        '''Align the paired end fastq files to the reference genome using bwa'''
+        fastq_read1_in, [fastq_read2_in, reference_in] = inputs
+        # Get the read group information for this sample from the configuration file
+        read_group = state.config.get_read_group(sample)
+        # Get the number of cores to request for the job, this translates into the
+        # number of threads to give to bwa's -t option
+        cores = state.config.get_stage_option('align_bwa', 'cores')
+        # Run bwa and pipe the output through samtools view to generate a BAM file
+        command = 'bwa mem -t {cores} -R "{read_group}" {reference} {fastq_read1} {fastq_read2} ' \
+                  '| samtools view -S -b - > {bam}' \
+                  .format(cores=cores,
+                      read_group=read_group,
+                      fastq_read1=fastq_read1_in,
+                      fastq_read2=fastq_read2_in,
+                      reference=reference_in,
+                      bam=bam_out)
+        run_stage(self.state, 'align_bwa', command)

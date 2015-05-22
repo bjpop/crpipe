@@ -52,7 +52,7 @@ def main():
     state = State(options=options, config=config, logger=logger,
                   drmaa_session=drmaa_session)
     # Build the pipeline workflow
-    pipeline = make_pipeline(config, state)
+    pipeline = make_pipeline(state)
     # Run (or print) the pipeline
     cmdline.run(options)
     # Shut down the DRMAA session

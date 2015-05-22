@@ -30,6 +30,40 @@ If you don't want to use a virtual environment then you can just install with pi
 pip install -U https://github.com/bjpop/crpipe
 ```
 
+## Worked example
+
+The `example` directory in the source distribution contains a small dataset to illustrate the use of the pipeline.
+
+1. Get a copy of the source distribution:
+
+```
+cd /path/to/test/directory
+git clone https://github.com/bjpop/crpipe
+```
+
+2. Install `crpipe` as described above.
+
+3. Get a reference genome.
+
+```
+cd crpipe/example
+mkdir reference
+# copy your reference into this directory, or make a symbolic link
+# call it reference/genome.fa
+```
+
+4. Run `crpipe` and ask it what it will do next.
+
+```
+crpipe -n --verbose 3
+```
+
+5. Run the pipeline.
+
+```
+crpipe --use_threads --log_file pipeline.log --jobs 2 --verbose 3
+```
+
 ## Usage
 
 You can get a summary of the command line arguments like so:

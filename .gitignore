@@ -1,0 +1,8 @@
+example/.ruffus_history.sqlite
+example/chart.png
+example/jobscripts/
+example/pipeline.log
+example/reference/
+example/sample1/sample1.bam
+example/sample1/sample1_R1_fastqc/
+example/sample1/sample1_R2_fastqc/

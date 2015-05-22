@@ -15,6 +15,12 @@ Crpipe is based on the [Ruffus](http://www.ruffus.org.uk/) library for writing b
 
 ## Installation
 
+#### External dependencies
+
+`crpipe` depends on [DRMAA](http://www.drmaa.org/) for submitting jobs to the cluster (it uses the Python wrapper to do this). 
+You need to install your own `libdrama.so` for your local job submission system. There are versions
+available for common schedulers such as Torque/PBS, [SLURM](http://apps.man.poznan.pl/trac/slurm-drmaa) and so on.
+
 I recommend using a virtual environment:
 
 ```
@@ -50,6 +56,14 @@ cd crpipe/example
 mkdir reference
 # copy your reference into this directory, or make a symbolic link
 # call it reference/genome.fa
+```
+
+#### Tell Python where your DRMAA library is 
+
+For example (this will depend on your local settings):
+
+```
+export DRMAA_LIBRARY_PATH=/usr/local/slurm_drmaa/1.0.7-gcc/lib/libdrmaa.so
 ```
 
 #### Run `crpipe` and ask it what it will do next

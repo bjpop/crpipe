@@ -1,8 +1,8 @@
-# A bioinformatics pipeline based on Ruffus 
+# A bioinformatics pipeline based on [Ruffus](http://www.ruffus.org.uk/)
 
 Author: Bernie Pope (bjpope@unimelb.edu.au)
 
-Crpipe is based on the Ruffus library for writing bioinformatics pipelines. Its features include:
+Crpipe is based on the [Ruffus](http://www.ruffus.org.uk/) library for writing bioinformatics pipelines. Its features include:
 
  * Job submission on a cluster using DRMAA (currently only tested with SLURM).
  * Job dependency calculation and checkpointing.
@@ -35,8 +35,6 @@ pip install -U https://github.com/bjpop/crpipe
 You can get a summary of the command line arguments like so:
 
 ```
-crpipe -h
-
 crpipe -h
 usage: crpipe [-h] [--verbose [VERBOSE]] [-L FILE] [-T JOBNAME] [-j N]
               [--use_threads] [-n] [--touch_files_only] [--recreate_database]

@@ -34,10 +34,10 @@ class Stages(object):
         '''Align the paired end fastq files to the reference genome using bwa'''
         fastq_read1_in, [fastq_read2_in, reference_in] = inputs
         # Get the read group information for this sample from the configuration file
-        read_group = state.config.get_read_group(sample)
+        read_group = self.state.config.get_read_group(sample)
         # Get the number of cores to request for the job, this translates into the
         # number of threads to give to bwa's -t option
-        cores = state.config.get_stage_option('align_bwa', 'cores')
+        cores = self.state.config.get_stage_option('align_bwa', 'cores')
         # Run bwa and pipe the output through samtools view to generate a BAM file
         command = 'bwa mem -t {cores} -R "{read_group}" {reference} {fastq_read1} {fastq_read2} ' \
                   '| samtools view -S -b - > {bam}' \

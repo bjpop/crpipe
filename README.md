@@ -34,14 +34,14 @@ pip install -U https://github.com/bjpop/crpipe
 
 The `example` directory in the source distribution contains a small dataset to illustrate the use of the pipeline.
 
-#### Get a copy of the source distribution:
+#### Get a copy of the source distribution
 
 ```
 cd /path/to/test/directory
 git clone https://github.com/bjpop/crpipe
 ```
 
-#### Install `crpipe` as described above.
+#### Install `crpipe` as described above
 
 #### Get a reference genome.
 
@@ -52,13 +52,19 @@ mkdir reference
 # call it reference/genome.fa
 ```
 
-####  Run `crpipe` and ask it what it will do next.
+#### Run `crpipe` and ask it what it will do next
 
 ```
 crpipe -n --verbose 3
 ```
 
-#### Run the pipeline.
+#### Generate a flowchart diagram
+
+```
+crpipe --flowchart pipeline_flow.png --flowchart_format png
+```
+
+#### Run the pipeline
 
 ```
 crpipe --use_threads --log_file pipeline.log --jobs 2 --verbose 3

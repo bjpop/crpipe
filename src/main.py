@@ -1,9 +1,14 @@
 '''
 A Bioinformatics pipeline based on Ruffus.
-Author: Bernie Pope (bjpope@unimelb.edu.au).
-'''
 
-# Remember to do export DRMAA_LIBRARY_PATH=/usr/local/slurm_drmaa/1.0.7-gcc/lib/libdrmaa.so
+Author: Bernie Pope (bjpope@unimelb.edu.au).
+
+Copyright: 2015
+
+See ../README.md for details about how to use the program.
+
+Repository: https://github.com/bjpop/crpipe
+'''
 
 from ruffus import *
 import ruffus.cmdline as cmdline
@@ -27,9 +32,12 @@ def parse_command_line():
     parser = cmdline.get_argparse(description='Colorectal cancer pipeline',
         ignored_args = ["version"] )
     parser.add_argument('--config', type=str, default=DEFAULT_CONFIG_FILE,
-        help='Pipeline configuration file in YAML format, defaults to {}'.format(DEFAULT_CONFIG_FILE))
-    parser.add_argument('--jobscripts', type=str, default=DEFAULT_JOBSCRIPT_DIR,
-        help='Directory to store cluster job scripts created by the pipeline, defaults to {}'.format(DEFAULT_JOBSCRIPT_DIR))
+        help='Pipeline configuration file in YAML format, defaults to {}' \
+            .format(DEFAULT_CONFIG_FILE))
+    parser.add_argument('--jobscripts', type=str,
+        default=DEFAULT_JOBSCRIPT_DIR,
+        help='Directory to store cluster job scripts created by the ' \
+             'pipeline, defaults to {}'.format(DEFAULT_JOBSCRIPT_DIR))
     parser.add_argument('--version', action='version',
         version='%(prog)s ' + version)
     return parser.parse_args()

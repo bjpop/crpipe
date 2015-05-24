@@ -4,9 +4,8 @@ taking into account the configuration settings,
 and command line options of the pipeline.
 '''
 
-# Remember to do export DRMAA_LIBRARY_PATH=/usr/local/slurm_drmaa/1.0.7-gcc/lib/libdrmaa.so
-
 from ruffus.drmaa_wrapper import run_job, error_drmaa_job
+
 
 # slurm memory is requested in MB, but the config file specifies in GB
 MEGABYTES_IN_GIGABYTE = 1024
@@ -16,22 +15,26 @@ SLURM options:
 
 --account=name          Charge job to specified accounts
 --exclusive             Allocate nodenumber of tasks to invoke on each nodes 
-                        in exclusive mode when cpu consumable resource is enabled
+                        in exclusive mode when cpu consumable resource is
+                        enabled
 --mem=MB                Minimum amount of real memory
---mem-per-cpu=MB        Maximum amount of real memory per allocated cpu required by a job
---mincpus=n             Minimum number of logical processors (threads) per node
+--mem-per-cpu=MB        Maximum amount of real memory per allocated cpu
+                        required by a job
+--mincpus=n             Minimum number of logical processors (threads)
+                        per node
 --nodes=N               Number of nodes on which to run (N = min[-max])
 --ntasks-per-node=n     Number of tasks to invoke on each node
 --partition=partition   Partition requested
 --reservation=name      Allocate resources from named reservation
 --time=hours:minutes    Set a maximum job wallclock time
 --ntasks=n              Number of tasks
---mail-type             Notify user by email when certain event types occur. Valid 
-                        type values are BEGIN, END, FAIL, REQUEUE, and ALL 
-                        (any state change)
+--mail-type             Notify user by email when certain event types
+                        occur. Valid type values are BEGIN, END, FAIL,
+                        REQUEUE, and ALL (any state change)
 '''
 
 def run_stage(state, stage, command):
+    '''Run a pipeline stage, either locally or on the cluster'''
 
     # Grab the configuration options for this stage
     config = state.config

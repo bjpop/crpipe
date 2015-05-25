@@ -2,7 +2,7 @@
 Build the pipeline workflow by plumbing the stages together.
 '''
 
-from ruffus import Pipeline, suffix, formatter, add_inputs
+from ruffus import Pipeline, suffix, formatter, add_inputs, output_from
 from stages import Stages
 
 
@@ -43,7 +43,7 @@ def make_pipeline(state):
         output='.fa.fai')
 
     # Align paired end reads in FASTQ to the reference producing a BAM file
-    pipeline.transform(
+    (pipeline.transform(
         task_func=stages.align_bwa,
         name='align_bwa',
         input=fastq_files,
@@ -61,9 +61,33 @@ def make_pipeline(state):
         # sample specific configuration options
         extras=['{sample[0]}'],
         # The output file name is the sample name with a .bam extension.
-        output='{path[0]}/{sample[0]}.bam') \
+        output='{path[0]}/{sample[0]}.bam')
         # Ensure the reference is indexed before we run this stage
-        .follows('index_reference_bwa') \
-        .follows('index_reference_samtools')
+        .follows('index_reference_bwa')
+        .follows('index_reference_samtools'))
+
+    # Generate alignment stats with bamtools
+    pipeline.transform(
+        task_func=stages.bamtools_stats,
+        name='bamtools_stats',
+        input=output_from('align_bwa'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        output='{path[0]}/{sample[0]}.stats.txt')
+
+    # Extract the discordant paired-end alignments
+    pipeline.transform(
+        task_func=stages.extract_discordant_alignments,
+        name='extract_discordant_alignments',
+        input=output_from('align_bwa'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        output='{path[0]}/{sample[0]}.discordants.unsorted.bam')
+
+    # Extract split-read alignments
+    pipeline.transform(
+        task_func=stages.extract_split_read_alignments,
+        name='extract_split_read_alignments',
+        input=output_from('align_bwa'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        output='{path[0]}/{sample[0]}.splitters.unsorted.bam')
 
     return pipeline

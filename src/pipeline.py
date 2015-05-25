@@ -90,4 +90,20 @@ def make_pipeline(state):
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
         output='{path[0]}/{sample[0]}.splitters.unsorted.bam')
 
+    # Sort discordant reads 
+    pipeline.transform(
+        task_func=stages.sort_bam,
+        name='sort_discordants',
+        input=output_from('extract_discordant_alignments'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.unsorted.bam'),
+        output='{path[0]}/{sample[0]}.discordants')
+
+    # Sort discordant reads 
+    pipeline.transform(
+        task_func=stages.sort_bam,
+        name='sort_splitters',
+        input=output_from('extract_split_read_alignments'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.unsorted.bam'),
+        output='{path[0]}/{sample[0]}.splitters')
+
     return pipeline

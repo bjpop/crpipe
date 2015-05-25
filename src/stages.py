@@ -78,3 +78,10 @@ class Stages(object):
                    'samtools view -Sb - > {output_bam}' 
                    .format(input_bam=bam_in, script=split_reads_script, output_bam=splitters_bam_out))
         run_stage(self.state, 'extract_split_read_alignments', command)
+
+
+    def sort_bam(self, bam_in, sorted_bam_out):
+        '''Sort the reads in a BAM file using samtools'''
+        command = 'samtools sort {input_bam} {output_bam}' \
+                  .format(input_bam=bam_in, output_bam=sorted_bam_out)
+        run_stage(self.state, 'sort_bam', command)

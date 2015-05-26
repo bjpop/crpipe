@@ -71,17 +71,27 @@ class Stages(object):
 
     def extract_split_read_alignments(self, bam_in, splitters_bam_out):
         '''Extract the split-read alignments using samtools'''
-        lumpy_script_dir = self.state.config.get_option('lumpy_scripts')
-        split_reads_script = os.path.join(lumpy_script_dir, 'extractSplitReads_BwaMem')
         command = ('samtools view -h {input_bam} | ' \
-                   '{script} -i stdin | ' \
+                   'extractSplitReads_BwaMem -i stdin | ' \
                    'samtools view -Sb - > {output_bam}' 
-                   .format(input_bam=bam_in, script=split_reads_script, output_bam=splitters_bam_out))
+                   .format(input_bam=bam_in, output_bam=splitters_bam_out))
         run_stage(self.state, 'extract_split_read_alignments', command)
 
-
-    def sort_bam(self, bam_in, sorted_bam_out):
-        '''Sort the reads in a BAM file using samtools'''
-        command = 'samtools sort {input_bam} {output_bam}' \
-                  .format(input_bam=bam_in, output_bam=sorted_bam_out)
+    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+    # So we pass this as an extra argument. However Ruffus needs to know the full name
+    # of the output bam file, so we pass that as the normal output parameter.
+    def sort_bam(self, bam_in, sorted_bam_out, sorted_bam_prefix):
+        '''Sort the reads in a bam file using samtools'''
+        command = 'samtools sort {input_bam} {output_bam_prefix}' \
+                  .format(input_bam=bam_in, output_bam_prefix=sorted_bam_prefix)
         run_stage(self.state, 'sort_bam', command)
+
+
+    def structural_variants_lumpy(self, inputs, vcf_out):
+        '''Call structural variants with lumpy'''
+        sample_bam, [splitters_bam, discordants_bam] = inputs
+        command = 'lumpyexpress -B {sample_bam} -S {splitters_bam} ' \
+                  '-D {discordants_bam} -o {vcf}' \
+                  .format(sample_bam=sample_bam, splitters_bam=splitters_bam,
+                          discordants_bam=discordants_bam, vcf=vcf_out)
+        run_stage(self.state, 'structural_variants_lumpy', command)

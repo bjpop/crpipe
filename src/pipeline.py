@@ -90,20 +90,39 @@ def make_pipeline(state):
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
         output='{path[0]}/{sample[0]}.splitters.unsorted.bam')
 
-    # Sort discordant reads 
+    # Sort discordant reads.
+    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+    # So we pass this as an extra argument. However Ruffus needs to know the full name
+    # of the output bam file, so we pass that as the normal output parameter.
     pipeline.transform(
         task_func=stages.sort_bam,
         name='sort_discordants',
         input=output_from('extract_discordant_alignments'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.unsorted.bam'),
-        output='{path[0]}/{sample[0]}.discordants')
+        extras=['{path[0]}/{sample[0]}.discordants'],
+        output='{path[0]}/{sample[0]}.discordants.bam')
 
     # Sort discordant reads 
+    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+    # So we pass this as an extra argument. However Ruffus needs to know the full name
+    # of the output bam file, so we pass that as the normal output parameter.
     pipeline.transform(
         task_func=stages.sort_bam,
         name='sort_splitters',
         input=output_from('extract_split_read_alignments'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.unsorted.bam'),
-        output='{path[0]}/{sample[0]}.splitters')
+        extras=['{path[0]}/{sample[0]}.splitters'],
+        output='{path[0]}/{sample[0]}.splitters.bam')
+
+    # Call structural variants with lumpy
+    (pipeline.transform(
+        task_func=stages.structural_variants_lumpy,
+        name='structural_variants_lumpy',
+        input=output_from('align_bwa'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        add_inputs=add_inputs(['{path[0]}/{sample[0]}.splitters.bam', '{path[0]}/{sample[0]}.discordants.bam']),
+        output='{path[0]}/{sample[0]}.lumpy.vcf')
+        .follows('sort_splitters')
+        .follows('sort_discordants'))
 
     return pipeline

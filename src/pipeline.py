@@ -66,6 +66,26 @@ def make_pipeline(state):
         .follows('index_reference_bwa')
         .follows('index_reference_samtools'))
 
+    # Sort alignment.
+    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+    # So we pass this as an extra argument. However Ruffus needs to know the full name
+    # of the output bam file, so we pass that as the normal output parameter.
+    pipeline.transform(
+        task_func=stages.sort_bam,
+        name='sort_alignment',
+        input=output_from('align_bwa'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        extras=['{path[0]}/{sample[0]}.sorted'],
+        output='{path[0]}/{sample[0]}.sorted.bam')
+
+    # Index the alignment with samtools 
+    pipeline.transform(
+        task_func=stages.index_bam,
+        name='index_alignment',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        output='{path[0]}/{sample[0]}.sorted.bam.bai')
+
     # Generate alignment stats with bamtools
     pipeline.transform(
         task_func=stages.bamtools_stats,
@@ -102,6 +122,14 @@ def make_pipeline(state):
         extras=['{path[0]}/{sample[0]}.discordants'],
         output='{path[0]}/{sample[0]}.discordants.bam')
 
+    # Index the sorted discordant bam with samtools 
+    pipeline.transform(
+        task_func=stages.index_bam,
+        name='index_discordants',
+        input=output_from('sort_discordants'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.bam'),
+        output='{path[0]}/{sample[0]}.discordants.bam.bai')
+
     # Sort discordant reads 
     # Samtools annoyingly takes the prefix of the output bam name as its argument.
     # So we pass this as an extra argument. However Ruffus needs to know the full name
@@ -114,6 +142,14 @@ def make_pipeline(state):
         extras=['{path[0]}/{sample[0]}.splitters'],
         output='{path[0]}/{sample[0]}.splitters.bam')
 
+    # Index the sorted splitters bam with samtools 
+    pipeline.transform(
+        task_func=stages.index_bam,
+        name='index_splitters',
+        input=output_from('sort_splitters'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.bam'),
+        output='{path[0]}/{sample[0]}.splitters.bam.bai')
+
     # Call structural variants with lumpy
     (pipeline.transform(
         task_func=stages.structural_variants_lumpy,
@@ -124,5 +160,19 @@ def make_pipeline(state):
         output='{path[0]}/{sample[0]}.lumpy.vcf')
         .follows('sort_splitters')
         .follows('sort_discordants'))
+
+    # Call genotypes on lumpy output using SVTyper 
+    (pipeline.transform(
+        task_func=stages.genotype_svtyper,
+        name='genotype_svtyper',
+        input=output_from('structural_variants_lumpy'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).lumpy.vcf'),
+        add_inputs=add_inputs(['{path[0]}/{sample[0]}.sorted.bam', '{path[0]}/{sample[0]}.splitters.bam']),
+        output='{path[0]}/{sample[0]}.svtyper.vcf')
+        .follows('align_bwa')
+        .follows('sort_splitters')
+        .follows('index_alignment')
+        .follows('index_splitters')
+        .follows('index_discordants'))
 
     return pipeline

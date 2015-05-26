@@ -95,3 +95,19 @@ class Stages(object):
                   .format(sample_bam=sample_bam, splitters_bam=splitters_bam,
                           discordants_bam=discordants_bam, vcf=vcf_out)
         run_stage(self.state, 'structural_variants_lumpy', command)
+
+
+    def genotype_svtyper(self, inputs, vcf_out):
+        '''Call genotypes on lumpy output using SVTyper'''
+        vcf_in, [sample_bam, splitters_bam] = inputs
+        command = 'svtyper -B {sample_bam} -S {splitters_bam} ' \
+                  '-i {vcf_in} -o {vcf_out}' \
+                  .format(sample_bam=sample_bam, splitters_bam=splitters_bam,
+                          vcf_in=vcf_in, vcf_out=vcf_out)
+        run_stage(self.state, 'genotype_svtyper', command)
+
+
+    def index_bam(self, bam_in, index_out):
+        '''Index a bam file with samtools'''
+        command = 'samtools index {bam}'.format(bam=bam_in)
+        run_stage(self.state, 'index_bam', command)

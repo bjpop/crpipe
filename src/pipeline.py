@@ -150,12 +150,13 @@ def make_pipeline(state):
     (pipeline.transform(
         task_func=stages.structural_variants_lumpy,
         name='structural_variants_lumpy',
-        input=output_from('align_bwa'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
         add_inputs=add_inputs(['{path[0]}/{sample[0]}.splitters.bam', '{path[0]}/{sample[0]}.discordants.bam']),
         output='{path[0]}/{sample[0]}.lumpy.vcf')
         .follows('sort_splitters')
-        .follows('sort_discordants'))
+        .follows('sort_discordants')
+        .follows('index_alignment'))
 
     # Call genotypes on lumpy output using SVTyper 
     (pipeline.transform(

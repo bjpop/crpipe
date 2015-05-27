@@ -28,6 +28,7 @@ Crpipe is based on the [Ruffus](http://www.ruffus.org.uk/) library for writing b
  * [bwa](http://bio-bwa.sourceforge.net/) for aligning reads to the reference genome (version 0.7.12)
  * [sambamba](http://lomereiter.github.io/sambamba/) for sorting bam files (version 0.5.4).
  * [lumpy](https://github.com/arq5x/lumpy-sv) for calling structural variants (version 0.2.11)
+ * [svtyper](https://github.com/cc2qe/svtyper) for genotyping the structural variants (version 0.0.2)
 
 You will need to install these dependencies yourself.
 

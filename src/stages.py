@@ -86,6 +86,18 @@ class Stages(object):
                   .format(input_bam=bam_in, output_bam_prefix=sorted_bam_prefix)
         run_stage(self.state, 'sort_bam', command)
 
+    def sort_bam_sambamba(self, bam_in, sorted_bam_out):
+        '''Sort the reads in a bam file using sambamba'''
+        cores = self.state.config.get_stage_option('sort_bam_sambamba', 'cores')
+        # Get the tmp directory
+        tmp = self.state.config.get_option('tmp') 
+        # Get the amount of memory requested for the job
+        mem = int(self.state.config.get_stage_option('sort_bam_sambamba', 'mem'))
+        mem_limit = max(mem - 4, 1)
+        command = 'sambamba sort --nthreads={cores} --memory-limit={mem}GB --tmpdir={tmp} --out={output_bam} {input_bam}' \
+                  .format(cores=cores, mem=mem_limit, tmp=tmp, input_bam=bam_in, output_bam=sorted_bam_out)
+        run_stage(self.state, 'sort_bam_sambamba', command)
+
 
     def structural_variants_lumpy(self, inputs, vcf_out):
         '''Call structural variants with lumpy'''

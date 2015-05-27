@@ -66,16 +66,12 @@ def make_pipeline(state):
         .follows('index_reference_bwa')
         .follows('index_reference_samtools'))
 
-    # Sort alignment.
-    # Samtools annoyingly takes the prefix of the output bam name as its argument.
-    # So we pass this as an extra argument. However Ruffus needs to know the full name
-    # of the output bam file, so we pass that as the normal output parameter.
+    # Sort alignment with sambamba
     pipeline.transform(
-        task_func=stages.sort_bam,
+        task_func=stages.sort_bam_sambamba,
         name='sort_alignment',
         input=output_from('align_bwa'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
-        extras=['{path[0]}/{sample[0]}.sorted'],
         output='{path[0]}/{sample[0]}.sorted.bam')
 
     # Index the alignment with samtools 

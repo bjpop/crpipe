@@ -17,9 +17,19 @@ Crpipe is based on the [Ruffus](http://www.ruffus.org.uk/) library for writing b
 
 #### External dependencies
 
-`crpipe` depends on [DRMAA](http://www.drmaa.org/) for submitting jobs to the cluster (it uses the Python wrapper to do this). 
-You need to install your own `libdrama.so` for your local job submission system. There are versions
-available for common schedulers such as Torque/PBS, [SLURM](http://apps.man.poznan.pl/trac/slurm-drmaa) and so on.
+`crpipe` depends on the following programs and libraries:
+
+ * [python](https://www.python.org/download/releases/2.7.5/) (version 2.7.5)
+ * [DRMAA](http://www.drmaa.org/) for submitting jobs to the cluster (it uses the Python wrapper to do this). 
+   You need to install your own `libdrama.so` for your local job submission system. There are versions
+   available for common schedulers such as Torque/PBS, [SLURM](http://apps.man.poznan.pl/trac/slurm-drmaa) and so on.
+ * [fastqc](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/) (version 0.10.1)
+ * [samtools](http://www.htslib.org/doc/samtools-1.1.html) version 1.1)
+ * [bwa](http://bio-bwa.sourceforge.net/) for aligning reads to the reference genome (version 0.7.12)
+ * [sambamba](http://lomereiter.github.io/sambamba/) for sorting bam files (version 0.5.4).
+ * [lumpy](https://github.com/arq5x/lumpy-sv) for calling structural variants (version 0.2.11)
+
+You will need to install these dependencies yourself.
 
 I recommend using a virtual environment:
 

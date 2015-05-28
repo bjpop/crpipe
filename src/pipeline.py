@@ -42,6 +42,20 @@ def make_pipeline(state):
         filter=suffix('.fa'),
         output='.fa.fai')
 
+    # Index the reference using bowtie 2 
+    pipeline.transform(
+        task_func=stages.index_reference_bowtie2,
+        name='index_reference_bowtie2',
+        input=reference_file,
+        filter=formatter('.+/(?P<refname>[a-zA-Z0-9]+\.fa)'),
+        output=['{path[0]}/{refname[0]}.1.bt2',
+                '{path[0]}/{refname[0]}.2.bt2',
+                '{path[0]}/{refname[0]}.3.bt2',
+                '{path[0]}/{refname[0]}.4.bt2',
+                '{path[0]}/{refname[0]}.rev.1.bt2',
+                '{path[0]}/{refname[0]}.rev.2.bt2'],
+        extras=['{path[0]}/{refname[0]}'])
+
     # Align paired end reads in FASTQ to the reference producing a BAM file
     (pipeline.transform(
         task_func=stages.align_bwa,

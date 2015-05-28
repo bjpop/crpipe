@@ -33,7 +33,13 @@ class Stages(object):
         '''Index the reference genome using samtools'''
         command = "samtools faidx {ref}".format(ref=reference_in)
         run_stage(self.state, 'index_reference_samtools', command)
-    
+
+
+    def index_reference_bowtie2(self, reference_in, index_file_out, output_prefix):
+        '''Index the reference genome using bowtie2'''
+        command = "bowtie2-build {ref} {output_prefix}".format(ref=reference_in, output_prefix=output_prefix)
+        run_stage(self.state, 'index_reference_bowtie2', command)
+
 
     def align_bwa(self, inputs, bam_out, sample):
         '''Align the paired end fastq files to the reference genome using bwa'''

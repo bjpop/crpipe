@@ -129,3 +129,21 @@ class Stages(object):
         '''Index a bam file with samtools'''
         command = 'samtools index {bam}'.format(bam=bam_in)
         run_stage(self.state, 'index_bam', command)
+
+
+    def structural_variants_socrates(self, bam_in, vcf_out, sample):
+        '''Call structural variants with Socrates'''
+        threads = self.state.config.get_stage_option('structural_variants_socrates', 'cores') 
+        # jvm_mem is in gb
+        jvm_mem = self.state.config.get_stage_option('structural_variants_socrates', 'jvm_mem') 
+        bowtie2_ref_dir = self.state.config.get_stage_option('structural_variants_socrates', 'bowtie2_ref_dir') 
+        tmp = self.state.config.get_option('tmp') 
+        sample_tmp = os.path.join(tmp, sample)
+        safe_make_dir(sample_tmp)
+        command = \
+        '''
+cd {sample_tmp}
+export _JAVA_OPTIONS='-Djava.io.tmpdir={sample_tmp}'
+Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_dir} --jvm_memory {jvm_mem}g {bam}
+        '''.format(sample_tmp=sample_tmp, threads=threads, bowtie2_ref_dir=bowtie2_ref_dir, jvm_mem=jvm_mem, bam=bam_in)
+        run_stage(self.state, 'structural_variants_socrates', command)

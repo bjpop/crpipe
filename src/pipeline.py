@@ -173,17 +173,27 @@ def make_pipeline(state):
         .follows('index_alignment'))
 
     # Call genotypes on lumpy output using SVTyper 
+    #(pipeline.transform(
+    #    task_func=stages.genotype_svtyper,
+    #    name='genotype_svtyper',
+    #    input=output_from('structural_variants_lumpy'),
+    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).lumpy.vcf'),
+    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.sorted.bam', '{path[0]}/{sample[0]}.splitters.bam']),
+    #    output='{path[0]}/{sample[0]}.svtyper.vcf')
+    #    .follows('align_bwa')
+    #    .follows('sort_splitters')
+    #    .follows('index_alignment')
+    #    .follows('index_splitters')
+    #    .follows('index_discordants'))
+
+    # Call SVs with Socrates
     (pipeline.transform(
-        task_func=stages.genotype_svtyper,
-        name='genotype_svtyper',
-        input=output_from('structural_variants_lumpy'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).lumpy.vcf'),
-        add_inputs=add_inputs(['{path[0]}/{sample[0]}.sorted.bam', '{path[0]}/{sample[0]}.splitters.bam']),
-        output='{path[0]}/{sample[0]}.svtyper.vcf')
-        .follows('align_bwa')
-        .follows('sort_splitters')
-        .follows('index_alignment')
-        .follows('index_splitters')
-        .follows('index_discordants'))
+        task_func=stages.structural_variants_socrates,
+        name='structural_variants_socrates',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        output='{path[0]}/{sample[0]}.socrates.vcf',
+        extras=['{sample[0]}'])
+        .follows('index_reference_bowtie2'))
 
     return pipeline

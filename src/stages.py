@@ -16,6 +16,16 @@ class Stages(object):
         self.state = state
 
 
+    def original_reference(self, output):
+        '''Original reference file'''
+        pass
+
+
+    def original_fastqs(self, output):
+        '''Original fastq files'''
+        pass
+
+
     def fastqc(self, fastq_in, dir_out):
         '''Quality check fastq file using fastqc'''
         safe_make_dir(dir_out)
@@ -131,19 +141,18 @@ class Stages(object):
         run_stage(self.state, 'index_bam', command)
 
 
-    def structural_variants_socrates(self, bam_in, vcf_out, sample):
+    def structural_variants_socrates(self, bam_in, variants_out, sample_dir):
         '''Call structural variants with Socrates'''
         threads = self.state.config.get_stage_option('structural_variants_socrates', 'cores') 
         # jvm_mem is in gb
         jvm_mem = self.state.config.get_stage_option('structural_variants_socrates', 'jvm_mem') 
         bowtie2_ref_dir = self.state.config.get_stage_option('structural_variants_socrates', 'bowtie2_ref_dir') 
-        tmp = self.state.config.get_option('tmp') 
-        sample_tmp = os.path.join(tmp, sample)
-        safe_make_dir(sample_tmp)
+        output_dir = os.path.join(sample_dir, 'socrates')
+        safe_make_dir(output_dir)
         command = \
         '''
-cd {sample_tmp}
-export _JAVA_OPTIONS='-Djava.io.tmpdir={sample_tmp}'
+cd {output_dir}
+export _JAVA_OPTIONS='-Djava.io.tmpdir={output_dir}'
 Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_dir} --jvm_memory {jvm_mem}g {bam}
-        '''.format(sample_tmp=sample_tmp, threads=threads, bowtie2_ref_dir=bowtie2_ref_dir, jvm_mem=jvm_mem, bam=bam_in)
+        '''.format(output_dir=output_dir, threads=threads, bowtie2_ref_dir=bowtie2_ref_dir, jvm_mem=jvm_mem, bam=bam_in)
         run_stage(self.state, 'structural_variants_socrates', command)

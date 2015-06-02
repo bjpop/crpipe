@@ -12,25 +12,40 @@ def make_pipeline(state):
     pipeline = Pipeline(name='crpipe')
     # Get a list of paths to all the FASTQ files
     fastq_files = state.config.get_option('fastqs')
+    # Find the path to the reference genome
+    reference_file = state.config.get_option('reference')
     # Stages are dependent on the state
     stages = Stages(state)
+
+    # The original FASTQ files
+    # This is a dummy stage. It is useful because it makes a node in the
+    # pipeline graph, and gives the pipeline an obvious starting point.
+    pipeline.originate(
+        task_func=stages.original_fastqs,
+        name='original_fastqs',
+        output=fastq_files)
+
+    # The original reference file
+    # This is a dummy stage. It is useful because it makes a node in the
+    # pipeline graph, and gives the pipeline an obvious starting point.
+    pipeline.originate(
+        task_func=stages.original_reference,
+        name='original_reference',
+        output=reference_file)
 
     # Run fastQC on the FASTQ files
     pipeline.transform(
         task_func=stages.fastqc,
         name='fastqc',
-        input=fastq_files,
+        input=output_from('original_fastqs'),
         filter=suffix('.fastq.gz'),
         output='_fastqc')
-
-    # Find the path to the reference genome
-    reference_file = state.config.get_option('reference')
 
     # Index the reference using BWA 
     pipeline.transform(
         task_func=stages.index_reference_bwa,
         name='index_reference_bwa',
-        input=reference_file,
+        input=output_from('original_reference'),
         filter=suffix('.fa'),
         output=['.fa.amb', '.fa.ann', '.fa.pac', '.fa.sa', '.fa.bwt'])
     
@@ -38,7 +53,7 @@ def make_pipeline(state):
     pipeline.transform(
         task_func=stages.index_reference_samtools,
         name='index_reference_samtools',
-        input=reference_file,
+        input=output_from('original_reference'),
         filter=suffix('.fa'),
         output='.fa.fai')
 
@@ -46,7 +61,7 @@ def make_pipeline(state):
     pipeline.transform(
         task_func=stages.index_reference_bowtie2,
         name='index_reference_bowtie2',
-        input=reference_file,
+        input=output_from('original_reference'),
         filter=formatter('.+/(?P<refname>[a-zA-Z0-9]+\.fa)'),
         output=['{path[0]}/{refname[0]}.1.bt2',
                 '{path[0]}/{refname[0]}.2.bt2',
@@ -60,7 +75,7 @@ def make_pipeline(state):
     (pipeline.transform(
         task_func=stages.align_bwa,
         name='align_bwa',
-        input=fastq_files,
+        input=output_from('original_fastqs'),
         # Match the R1 (read 1) FASTQ file and grab the path and sample name. 
         # This will be the first input to the stage.
         # We assume the sample name may consist of only alphanumeric
@@ -133,12 +148,12 @@ def make_pipeline(state):
         output='{path[0]}/{sample[0]}.discordants.bam')
 
     # Index the sorted discordant bam with samtools 
-    pipeline.transform(
-        task_func=stages.index_bam,
-        name='index_discordants',
-        input=output_from('sort_discordants'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.bam'),
-        output='{path[0]}/{sample[0]}.discordants.bam.bai')
+    # pipeline.transform(
+    #   task_func=stages.index_bam,
+    #   name='index_discordants',
+    #   input=output_from('sort_discordants'),
+    #   filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.bam'),
+    #   output='{path[0]}/{sample[0]}.discordants.bam.bai')
 
     # Sort discordant reads 
     # Samtools annoyingly takes the prefix of the output bam name as its argument.
@@ -153,12 +168,12 @@ def make_pipeline(state):
         output='{path[0]}/{sample[0]}.splitters.bam')
 
     # Index the sorted splitters bam with samtools 
-    pipeline.transform(
-        task_func=stages.index_bam,
-        name='index_splitters',
-        input=output_from('sort_splitters'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.bam'),
-        output='{path[0]}/{sample[0]}.splitters.bam.bai')
+    # pipeline.transform(
+    #    task_func=stages.index_bam,
+    #    name='index_splitters',
+    #    input=output_from('sort_splitters'),
+    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.bam'),
+    #    output='{path[0]}/{sample[0]}.splitters.bam.bai')
 
     # Call structural variants with lumpy
     (pipeline.transform(
@@ -192,8 +207,9 @@ def make_pipeline(state):
         name='structural_variants_socrates',
         input=output_from('sort_alignment'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        output='{path[0]}/{sample[0]}.socrates.vcf',
-        extras=['{sample[0]}'])
+        # output goes to {path[0]}/socrates/
+        output='{path[0]}/socrates/results_Socrates_paired_{sample[0]}.sorted_long_sc_l25_q5_m5_i95.txt',
+        extras=['{path[0]}'])
         .follows('index_reference_bowtie2'))
 
     return pipeline

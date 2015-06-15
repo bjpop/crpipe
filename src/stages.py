@@ -41,14 +41,22 @@ class Stages(object):
 
     def index_reference_samtools(self, reference_in, index_file_out):
         '''Index the reference genome using samtools'''
-        command = "samtools faidx {ref}".format(ref=reference_in)
+        command = 'samtools faidx {ref}'.format(ref=reference_in)
         run_stage(self.state, 'index_reference_samtools', command)
 
 
     def index_reference_bowtie2(self, reference_in, index_file_out, output_prefix):
         '''Index the reference genome using bowtie2'''
-        command = "bowtie2-build {ref} {output_prefix}".format(ref=reference_in, output_prefix=output_prefix)
+        command = 'bowtie2-build {ref} {output_prefix}' \
+                      .format(ref=reference_in, output_prefix=output_prefix)
         run_stage(self.state, 'index_reference_bowtie2', command)
+
+
+    def reference_dictionary_picard(self, reference_in, dict_file_out):
+        '''Create a FASTA sequence dictionary for the reference using picard'''
+        command = 'java -jar $PICARD_HOME/lib/CreateSequenceDictionary.jar ' \
+                  'R={ref} O={dict_file}'.format(ref=reference_in, dict_file=dict_file_out)
+        run_stage(self.state, 'reference_dictionary_picard', command)
 
 
     def align_bwa(self, inputs, bam_out, sample):
@@ -76,6 +84,31 @@ class Stages(object):
         command = 'bamtools stats -in {bam} > {stats}' \
                   .format(bam=bam_in, stats=stats_out)
         run_stage(self.state, 'bamtools_stats', command)
+
+
+    def extract_genes_bedtools(self, bam_in, bam_out):
+        '''Extract MMR genes from the sorted BAM file'''
+        bed_file = self.state.config.get_stage_option('extract_genes_bedtools', 'bed') 
+        command = 'bedtools intersect -abam {bam_in} -b {bed_file} > {bam_out}' \
+                  .format(bam_in=bam_in, bed_file=bed_file, bam_out=bam_out)
+        run_stage(self.state, 'extract_genes_bedtools', command)
+
+
+    def extract_chromosomes_samtools(self, bam_in, bam_out):
+        '''Extract selected chomosomes from the bam files'''
+        command = 'samtools view -h -b {bam_in} chr2 chr3 chr7 > {bam_out}' \
+                  .format(bam_in=bam_in, bam_out=bam_out)
+        run_stage(self.state, 'extract_chromosomes_samtools', command)
+
+
+    #def alignment_coverage_gatk(self, inputs, summary_out, output_prefix):
+    #    '''Compute depth of coverage of the alignment with GATK DepthOfCoverage'''
+    #    bam_in, [reference_in] = inputs
+    #    # Give the Java runtime 1GB less than requested, for the max heap size
+    #    mem = int(self.state.config.get_stage_option('alignment_coverage_gatk', 'mem')) - 1 
+    #    command = 'java -Xmx{mem}g -jar $GATK_HOME/GenomeAnalysisTK.jar -T DepthOfCoverage -R {ref} -o {output_base} -I {bam}' \
+    #              .format(mem=mem, ref=reference_in, output_base=output_prefix, bam=bam_in)
+    #    run_stage(self.state, 'alignment_coverage_gatk', command)
 
 
     def extract_discordant_alignments(self, bam_in, discordants_bam_out):

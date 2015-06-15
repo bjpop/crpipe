@@ -71,6 +71,14 @@ def make_pipeline(state):
                 '{path[0]}/{refname[0]}.rev.2.bt2'],
         extras=['{path[0]}/{refname[0]}'])
 
+    # Create a FASTA sequence dictionary for the reference using picard
+    pipeline.transform(
+        task_func=stages.reference_dictionary_picard,
+        name='reference_dictionary_picard',
+        input=output_from('original_reference'),
+        filter=suffix('.fa'),
+        output='.dict')
+
     # Align paired end reads in FASTQ to the reference producing a BAM file
     (pipeline.transform(
         task_func=stages.align_bwa,
@@ -102,6 +110,40 @@ def make_pipeline(state):
         input=output_from('align_bwa'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
         output='{path[0]}/{sample[0]}.sorted.bam')
+
+    # Extract MMR genes from the sorted BAM file
+    pipeline.transform(
+        task_func=stages.extract_genes_bedtools,
+        name='extract_genes_bedtools',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        output='{path[0]}/{sample[0]}.mmr.bam')
+
+    # Extract selected chromosomes from the sorted BAM file
+    pipeline.transform(
+        task_func=stages.extract_chromosomes_samtools,
+        name='extract_chromosomes_samtools',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        output='{path[0]}/{sample[0]}.chroms.bam')
+
+    # Index the MMR genes bam file with samtools 
+    pipeline.transform(
+        task_func=stages.index_bam,
+        name='index_mmr_alignment',
+        input=output_from('extract_genes_bedtools'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).mmr.bam'),
+        output='{path[0]}/{sample[0]}.mmr.bam.bai')
+
+    # Compute depth of coverage of the alignment with GATK DepthOfCoverage
+    #pipeline.transform(
+    #    task_func=stages.alignment_coverage_gatk,
+    #    name='alignment_coverage_gatk',
+    #    input=output_from('sort_alignment'),
+    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+    #    add_inputs=add_inputs([reference_file]),
+    #    output='{path[0]}/{sample[0]}.coverage_summary',
+    #    extras=['{path[0]}/{sample[0]}_coverage'])
 
     # Index the alignment with samtools 
     pipeline.transform(
@@ -211,5 +253,6 @@ def make_pipeline(state):
         output='{path[0]}/socrates/results_Socrates_paired_{sample[0]}.sorted_long_sc_l25_q5_m5_i95.txt',
         extras=['{path[0]}'])
         .follows('index_reference_bowtie2'))
+
 
     return pipeline

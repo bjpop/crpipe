@@ -25,6 +25,14 @@ def make_pipeline(state):
         name='original_fastqs',
         output=fastq_files)
 
+    # Convert FASTQ file to FASTA using fastx toolkit
+    # pipeline.transform(
+    #     task_func=stages.fastq_to_fasta,
+    #     name='fastq_to_fasta',
+    #     input=output_from('original_fastqs'),
+    #     filter=suffix('.fastq.gz'),
+    #     output='.fasta')
+
     # The original reference file
     # This is a dummy stage. It is useful because it makes a node in the
     # pipeline graph, and gives the pipeline an obvious starting point.
@@ -254,5 +262,31 @@ def make_pipeline(state):
         extras=['{path[0]}'])
         .follows('index_reference_bowtie2'))
 
+    # Join both read pair files using gustaf_mate_joining
+    #pipeline.transform(
+    #    task_func=stages.gustaf_mate_joining,
+    #    name='gustaf_mate_joining',
+    #    input=output_from('fastq_to_fasta'),
+    #    # Match the R1 (read 1) FASTA file and grab the path and sample name. 
+    #    # This will be the first input to the stage.
+    #    # We assume the sample name may consist of only alphanumeric
+    #    # characters.
+    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+)_R1.fasta'),
+    #    # Add one more input to the stage:
+    #    #    1. The corresponding R2 FASTA file
+    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}_R2.fasta']),
+    #    output='{path[0]}/{sample[0]}.joined_mates.fasta')
+
+
+    # Call structural variants with pindel 
+    (pipeline.transform(
+        task_func=stages.structural_variants_pindel,
+        name='structural_variants_pindel',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        add_inputs=add_inputs(['{path[0]}/{sample[0]}.pindel_config.txt', reference_file]),
+        output='{path[0]}/{sample[0]}.pindel')
+        .follows('index_reference_bwa')
+        .follows('index_reference_samtools'))
 
     return pipeline

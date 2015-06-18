@@ -26,6 +26,15 @@ class Stages(object):
         pass
 
 
+    def fastq_to_fasta(self, fastq_in, fasta_out):
+        '''Convert FASTQ file to FASTA'''
+        # -n flag says keep reads with 'N' (unknown) bases, otherwise
+        # they would have been discarded
+        # -Q33 means use Illumina quality scores
+        command = 'zcat {fastq_in} | fastq_to_fasta -n -Q33 -o {fasta_out}'.format(fastq_in=fastq_in, fasta_out=fasta_out)
+        run_stage(self.state, 'fastq_to_fasta', command)
+
+
     def fastqc(self, fastq_in, dir_out):
         '''Quality check fastq file using fastqc'''
         safe_make_dir(dir_out)
@@ -189,3 +198,18 @@ export _JAVA_OPTIONS='-Djava.io.tmpdir={output_dir}'
 Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_dir} --jvm_memory {jvm_mem}g {bam}
         '''.format(output_dir=output_dir, threads=threads, bowtie2_ref_dir=bowtie2_ref_dir, jvm_mem=jvm_mem, bam=bam_in)
         run_stage(self.state, 'structural_variants_socrates', command)
+
+
+    #def gustaf_mate_joining(self, inputs, fasta_out):
+    #    '''Join both read pair fasta files using gustaf_mate_joining'''
+    #    fasta_read1_in, [fasta_read2_in] = inputs
+    #    command = 'gustaf_mate_joining -vv {reads1} {reads2} -o {output}'.format(reads1=fasta_read1_in, reads2=fasta_read2_in, output=fasta_out)
+    #    run_stage(self.state, 'gustaf_mate_joining', command)
+
+
+    def structural_variants_pindel(self, inputs, output):
+        '''Call structural variants with pindel'''
+        bam_in, [config_in, reference_in] = inputs
+        cores = self.state.config.get_stage_option('structural_variants_pindel', 'cores')
+        command = 'pindel -T {threads} -f {reference} -i {config} -c ALL -o {output}'.format(threads=cores, reference=reference_in, config=config_in, output=output) 
+        run_stage(self.state, 'structural_variants_pindel', command)

@@ -22,6 +22,12 @@ class Config(object):
         self.config = config
         self.config_filename = config_filename
 
+    def get_options(self, *options):
+        num_options = len(options)
+        if num_options == 1:
+            return self.get_option(options[0])
+        else:
+            return (self.get_option(o) for o in options)
 
     def get_option(self, option):
         '''Retrieve a global option from the configuration'''
@@ -31,6 +37,12 @@ class Config(object):
             raise Exception("Unknown option: {}, not in configuration " \
                 "file: {}".format(option, self.config_filename))
 
+    def get_stage_options(self, stage, *options):
+        num_options = len(options)
+        if num_options == 1:
+            return self.get_stage_option(stage, options[0])
+        else:
+            return (self.get_stage_option(stage, o) for o in options)
 
     def get_stage_option(self, stage, option):
         '''Try to retrieve a configuration option for a particular stage.
@@ -63,24 +75,13 @@ class Config(object):
         '''Check that the configuration is valid.'''
         config = self.config
         filename = self.config_filename
-        # Test for required fields: defaults, stages, fastqs, read_groups
+        # Test for required fields: defaults, stages, fastqs, pipeline_id
         check_required_field(config, filename, 'defaults')
+        check_required_field(config, filename, 'reference')
         check_required_field(config, filename, 'stages')
         check_required_field(config, filename, 'fastqs')
-        check_required_field(config, filename, 'read_groups')
+        check_required_field(config, filename, 'pipeline_id')
 
-
-    def get_read_group(self, sample):
-        '''Get the read group information for a given sample'''
-        config = self.config
-        filename = self.config_filename
-        # This is already validated to exist
-        read_groups = config['read_groups']
-        if sample in read_groups:
-            return read_groups[sample]
-        else:
-            raise Exception("Configuration file {} does not have read group " \
-                "for sample {}".format(filename, sample))
 
 
 def check_required_field(config, filename, field):

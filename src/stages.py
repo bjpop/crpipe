@@ -14,17 +14,17 @@ import os
 class Stages(object):
     def __init__(self, state):
         self.state = state
+        self.reference = self.get_options('reference')
 
+    def get_stage_options(self, stage, *options):
+        return self.state.config.get_stage_options(stage, *options)
 
-    def original_reference(self, output):
-        '''Original reference file'''
-        pass
-
+    def get_options(self, *options):
+        return self.state.config.get_options(*options)
 
     def original_fastqs(self, output):
         '''Original fastq files'''
         pass
-
 
     def fastq_to_fasta(self, fastq_in, fasta_out):
         '''Convert FASTQ file to FASTA'''
@@ -42,35 +42,10 @@ class Stages(object):
         run_stage(self.state, 'fastqc', command)
     
 
-    def index_reference_bwa(self, reference_in, index_file_out):
-        '''Index the reference genome using BWA'''
-        command = "bwa index -a bwtsw {ref}".format(ref=reference_in)
-        run_stage(self.state, 'index_reference_bwa', command)
-    
-
-    def index_reference_samtools(self, reference_in, index_file_out):
-        '''Index the reference genome using samtools'''
-        command = 'samtools faidx {ref}'.format(ref=reference_in)
-        run_stage(self.state, 'index_reference_samtools', command)
-
-
-    def index_reference_bowtie2(self, reference_in, index_file_out, output_prefix):
-        '''Index the reference genome using bowtie2'''
-        command = 'bowtie2-build {ref} {output_prefix}' \
-                      .format(ref=reference_in, output_prefix=output_prefix)
-        run_stage(self.state, 'index_reference_bowtie2', command)
-
-
-    def reference_dictionary_picard(self, reference_in, dict_file_out):
-        '''Create a FASTA sequence dictionary for the reference using picard'''
-        command = 'java -jar $PICARD_HOME/lib/CreateSequenceDictionary.jar ' \
-                  'R={ref} O={dict_file}'.format(ref=reference_in, dict_file=dict_file_out)
-        run_stage(self.state, 'reference_dictionary_picard', command)
-
 
     def align_bwa(self, inputs, bam_out, sample):
         '''Align the paired end fastq files to the reference genome using bwa'''
-        fastq_read1_in, [fastq_read2_in, reference_in] = inputs
+        fastq_read1_in, fastq_read2_in = inputs
         # Get the read group information for this sample from the configuration file
         read_group = self.state.config.get_read_group(sample)
         # Get the number of cores to request for the job, this translates into the
@@ -83,7 +58,7 @@ class Stages(object):
                       read_group=read_group,
                       fastq_read1=fastq_read1_in,
                       fastq_read2=fastq_read2_in,
-                      reference=reference_in,
+                      reference=self.reference,
                       bam=bam_out)
         run_stage(self.state, 'align_bwa', command)
  
@@ -199,6 +174,41 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
         '''.format(output_dir=output_dir, threads=threads, bowtie2_ref_dir=bowtie2_ref_dir, jvm_mem=jvm_mem, bam=bam_in)
         run_stage(self.state, 'structural_variants_socrates', command)
 
+    def deletions_delly(self, bams_in, vcf_out):
+        '''Call deletions with delly'''
+        bams_args = ' '.join(bams_in)
+        threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
+        exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
+        command = 'OMP_NUM_THREADS={threads} delly -t DEL -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+            .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
+        run_stage(self.state, 'structural_variants_delly', command)
+
+    def duplications_delly(self, bams_in, vcf_out):
+        '''Call duplicaitons with delly'''
+        bams_args = ' '.join(bams_in)
+        threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
+        exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
+        command = 'OMP_NUM_THREADS={threads} delly -t DUP -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+            .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
+        run_stage(self.state, 'structural_variants_delly', command)
+
+    def inversions_delly(self, bams_in, vcf_out):
+        '''Call inversions with delly'''
+        bams_args = ' '.join(bams_in)
+        threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
+        exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
+        command = 'OMP_NUM_THREADS={threads} delly -t INV -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+            .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
+        run_stage(self.state, 'structural_variants_delly', command)
+
+    def translocations_delly(self, bams_in, vcf_out):
+        '''Call translocatins with delly'''
+        bams_args = ' '.join(bams_in)
+        threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
+        exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
+        command = 'OMP_NUM_THREADS={threads} delly -t TRA -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+            .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
+        run_stage(self.state, 'structural_variants_delly', command)
 
     #def gustaf_mate_joining(self, inputs, fasta_out):
     #    '''Join both read pair fasta files using gustaf_mate_joining'''
@@ -207,9 +217,9 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
     #    run_stage(self.state, 'gustaf_mate_joining', command)
 
 
-    def structural_variants_pindel(self, inputs, output):
-        '''Call structural variants with pindel'''
-        bam_in, [config_in, reference_in] = inputs
-        cores = self.state.config.get_stage_option('structural_variants_pindel', 'cores')
-        command = 'pindel -T {threads} -f {reference} -i {config} -c ALL -o {output}'.format(threads=cores, reference=reference_in, config=config_in, output=output) 
-        run_stage(self.state, 'structural_variants_pindel', command)
+    #def structural_variants_pindel(self, inputs, output):
+    #    '''Call structural variants with pindel'''
+    #    bam_in, [config_in, reference_in] = inputs
+    #    cores = self.state.config.get_stage_option('structural_variants_pindel', 'cores')
+    #    command = 'pindel -T {threads} -f {reference} -i {config} -c ALL -o {output}'.format(threads=cores, reference=reference_in, config=config_in, output=output) 
+    #    run_stage(self.state, 'structural_variants_pindel', command)

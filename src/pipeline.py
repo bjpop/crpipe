@@ -13,7 +13,6 @@ def make_pipeline(state):
     # Get a list of paths to all the FASTQ files
     fastq_files = state.config.get_option('fastqs')
     # Find the path to the reference genome
-    reference_file = state.config.get_option('reference')
     # Stages are dependent on the state
     stages = Stages(state)
 
@@ -36,10 +35,10 @@ def make_pipeline(state):
     # The original reference file
     # This is a dummy stage. It is useful because it makes a node in the
     # pipeline graph, and gives the pipeline an obvious starting point.
-    pipeline.originate(
-        task_func=stages.original_reference,
-        name='original_reference',
-        output=reference_file)
+    #pipeline.originate(
+    #    task_func=stages.original_reference,
+    #    name='original_reference',
+    #    output=reference_file)
 
     # Run fastQC on the FASTQ files
     pipeline.transform(
@@ -50,45 +49,45 @@ def make_pipeline(state):
         output='_fastqc')
 
     # Index the reference using BWA 
-    pipeline.transform(
-        task_func=stages.index_reference_bwa,
-        name='index_reference_bwa',
-        input=output_from('original_reference'),
-        filter=suffix('.fa'),
-        output=['.fa.amb', '.fa.ann', '.fa.pac', '.fa.sa', '.fa.bwt'])
+    #pipeline.transform(
+    #    task_func=stages.index_reference_bwa,
+    #    name='index_reference_bwa',
+    #    input=output_from('original_reference'),
+    #    filter=suffix('.fa'),
+    #    output=['.fa.amb', '.fa.ann', '.fa.pac', '.fa.sa', '.fa.bwt'])
     
     # Index the reference using samtools 
-    pipeline.transform(
-        task_func=stages.index_reference_samtools,
-        name='index_reference_samtools',
-        input=output_from('original_reference'),
-        filter=suffix('.fa'),
-        output='.fa.fai')
+    # pipeline.transform(
+    #     task_func=stages.index_reference_samtools,
+    #    name='index_reference_samtools',
+    #    input=output_from('original_reference'),
+    #    filter=suffix('.fa'),
+    #    output='.fa.fai')
 
     # Index the reference using bowtie 2 
-    pipeline.transform(
-        task_func=stages.index_reference_bowtie2,
-        name='index_reference_bowtie2',
-        input=output_from('original_reference'),
-        filter=formatter('.+/(?P<refname>[a-zA-Z0-9]+\.fa)'),
-        output=['{path[0]}/{refname[0]}.1.bt2',
-                '{path[0]}/{refname[0]}.2.bt2',
-                '{path[0]}/{refname[0]}.3.bt2',
-                '{path[0]}/{refname[0]}.4.bt2',
-                '{path[0]}/{refname[0]}.rev.1.bt2',
-                '{path[0]}/{refname[0]}.rev.2.bt2'],
-        extras=['{path[0]}/{refname[0]}'])
+    # pipeline.transform(
+    #     task_func=stages.index_reference_bowtie2,
+    #     name='index_reference_bowtie2',
+    #     input=output_from('original_reference'),
+    #     filter=formatter('.+/(?P<refname>[a-zA-Z0-9]+\.fa)'),
+    #     output=['{path[0]}/{refname[0]}.1.bt2',
+    #             '{path[0]}/{refname[0]}.2.bt2',
+    #             '{path[0]}/{refname[0]}.3.bt2',
+    #             '{path[0]}/{refname[0]}.4.bt2',
+    #             '{path[0]}/{refname[0]}.rev.1.bt2',
+    #             '{path[0]}/{refname[0]}.rev.2.bt2'],
+    #     extras=['{path[0]}/{refname[0]}'])
 
-    # Create a FASTA sequence dictionary for the reference using picard
-    pipeline.transform(
-        task_func=stages.reference_dictionary_picard,
-        name='reference_dictionary_picard',
-        input=output_from('original_reference'),
-        filter=suffix('.fa'),
-        output='.dict')
+    # # Create a FASTA sequence dictionary for the reference using picard
+    # pipeline.transform(
+    #     task_func=stages.reference_dictionary_picard,
+    #     name='reference_dictionary_picard',
+    #     input=output_from('original_reference'),
+    #     filter=suffix('.fa'),
+    #     output='.dict')
 
     # Align paired end reads in FASTQ to the reference producing a BAM file
-    (pipeline.transform(
+    pipeline.transform(
         task_func=stages.align_bwa,
         name='align_bwa',
         input=output_from('original_fastqs'),
@@ -99,17 +98,13 @@ def make_pipeline(state):
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+)_R1.fastq.gz'),
         # Add two more inputs to the stage:
         #    1. The corresponding R2 FASTQ file
-        #    2. The reference genome file
-        add_inputs=add_inputs(['{path[0]}/{sample[0]}_R2.fastq.gz', reference_file]),
+        add_inputs=add_inputs('{path[0]}/{sample[0]}_R2.fastq.gz'),
         # Add an "extra" argument to the state (beyond the inputs and outputs)
         # which is the sample name. This is needed within the stage for finding out
         # sample specific configuration options
         extras=['{sample[0]}'],
         # The output file name is the sample name with a .bam extension.
         output='{path[0]}/{sample[0]}.bam')
-        # Ensure the reference is indexed before we run this stage
-        .follows('index_reference_bwa')
-        .follows('index_reference_samtools'))
 
     # Sort alignment with sambamba
     pipeline.transform(
@@ -233,9 +228,9 @@ def make_pipeline(state):
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
         add_inputs=add_inputs(['{path[0]}/{sample[0]}.splitters.bam', '{path[0]}/{sample[0]}.discordants.bam']),
         output='{path[0]}/{sample[0]}.lumpy.vcf')
+        .follows('index_alignment')
         .follows('sort_splitters')
-        .follows('sort_discordants')
-        .follows('index_alignment'))
+        .follows('sort_discordants'))
 
     # Call genotypes on lumpy output using SVTyper 
     #(pipeline.transform(
@@ -259,8 +254,35 @@ def make_pipeline(state):
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
         # output goes to {path[0]}/socrates/
         output='{path[0]}/socrates/results_Socrates_paired_{sample[0]}.sorted_long_sc_l25_q5_m5_i95.txt',
-        extras=['{path[0]}'])
-        .follows('index_reference_bowtie2'))
+        extras=['{path[0]}']))
+
+    # Call DELs with DELLY 
+    pipeline.merge(
+        task_func=stages.deletions_delly,
+        name='deletions_delly',
+        input=output_from('sort_alignment'),
+        output='delly.DEL.vcf')
+
+    # Call DUPs with DELLY 
+    pipeline.merge(
+        task_func=stages.duplications_delly,
+        name='duplications_delly',
+        input=output_from('sort_alignment'),
+        output='delly.DUP.vcf')
+
+    # Call INVs with DELLY 
+    pipeline.merge(
+        task_func=stages.inversions_delly,
+        name='inversions_delly',
+        input=output_from('sort_alignment'),
+        output='delly.INV.vcf')
+
+    # Call TRAs with DELLY 
+    pipeline.merge(
+        task_func=stages.translocations_delly,
+        name='translocations_delly',
+        input=output_from('sort_alignment'),
+        output='delly.TRA.vcf')
 
     # Join both read pair files using gustaf_mate_joining
     #pipeline.transform(
@@ -279,14 +301,14 @@ def make_pipeline(state):
 
 
     # Call structural variants with pindel 
-    (pipeline.transform(
-        task_func=stages.structural_variants_pindel,
-        name='structural_variants_pindel',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        add_inputs=add_inputs(['{path[0]}/{sample[0]}.pindel_config.txt', reference_file]),
-        output='{path[0]}/{sample[0]}.pindel')
-        .follows('index_reference_bwa')
-        .follows('index_reference_samtools'))
+    #(pipeline.transform(
+    #    task_func=stages.structural_variants_pindel,
+    #    name='structural_variants_pindel',
+    #    input=output_from('sort_alignment'),
+    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.pindel_config.txt', reference_file]),
+    #    output='{path[0]}/{sample[0]}.pindel')
+    #    .follows('index_reference_bwa')
+    #    .follows('index_reference_samtools'))
 
     return pipeline

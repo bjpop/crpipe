@@ -82,7 +82,17 @@ class Config(object):
         check_required_field(config, filename, 'fastqs')
         check_required_field(config, filename, 'pipeline_id')
 
-
+    def get_read_group(self, sample):
+        '''Get the read group information for a given sample'''
+        config = self.config
+        filename = self.config_filename
+        # This is already validated to exist
+        read_groups = config['read_groups']
+        if sample in read_groups:
+            return read_groups[sample]
+        else:
+            raise Exception("Configuration file {} does not have read group " \
+                "for sample {}".format(filename, sample))
 
 def check_required_field(config, filename, field):
     '''Utility to check whether a field exists in the config dictionary'''

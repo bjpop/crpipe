@@ -41,12 +41,12 @@ def make_pipeline(state):
     #    output=reference_file)
 
     # Run fastQC on the FASTQ files
-    pipeline.transform(
-        task_func=stages.fastqc,
-        name='fastqc',
-        input=output_from('original_fastqs'),
-        filter=suffix('.fastq.gz'),
-        output='_fastqc')
+    #pipeline.transform(
+    #    task_func=stages.fastqc,
+    #    name='fastqc',
+    #    input=output_from('original_fastqs'),
+    #    filter=suffix('.fastq.gz'),
+    #    output='_fastqc')
 
     # Index the reference using BWA 
     #pipeline.transform(
@@ -106,156 +106,157 @@ def make_pipeline(state):
         # The output file name is the sample name with a .bam extension.
         output='{path[0]}/{sample[0]}.bam')
 
-    # Sort alignment with sambamba
+    # Sort alignment with samtools 
     pipeline.transform(
-        task_func=stages.sort_bam_sambamba,
+        task_func=stages.sort_bam_samtools,
         name='sort_alignment',
         input=output_from('align_bwa'),
         filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+        extras=['{path[0]}/{sample[0]}.sorted'],
         output='{path[0]}/{sample[0]}.sorted.bam')
-
-    # Extract MMR genes from the sorted BAM file
-    pipeline.transform(
-        task_func=stages.extract_genes_bedtools,
-        name='extract_genes_bedtools',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        output='{path[0]}/{sample[0]}.mmr.bam')
-
-    # Extract selected chromosomes from the sorted BAM file
-    pipeline.transform(
-        task_func=stages.extract_chromosomes_samtools,
-        name='extract_chromosomes_samtools',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        output='{path[0]}/{sample[0]}.chroms.bam')
-
-    # Index the MMR genes bam file with samtools 
-    pipeline.transform(
-        task_func=stages.index_bam,
-        name='index_mmr_alignment',
-        input=output_from('extract_genes_bedtools'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).mmr.bam'),
-        output='{path[0]}/{sample[0]}.mmr.bam.bai')
-
-    # Compute depth of coverage of the alignment with GATK DepthOfCoverage
-    #pipeline.transform(
-    #    task_func=stages.alignment_coverage_gatk,
-    #    name='alignment_coverage_gatk',
-    #    input=output_from('sort_alignment'),
-    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-    #    add_inputs=add_inputs([reference_file]),
-    #    output='{path[0]}/{sample[0]}.coverage_summary',
-    #    extras=['{path[0]}/{sample[0]}_coverage'])
-
-    # Index the alignment with samtools 
-    pipeline.transform(
-        task_func=stages.index_bam,
-        name='index_alignment',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        output='{path[0]}/{sample[0]}.sorted.bam.bai')
-
-    # Generate alignment stats with bamtools
-    pipeline.transform(
-        task_func=stages.bamtools_stats,
-        name='bamtools_stats',
-        input=output_from('align_bwa'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
-        output='{path[0]}/{sample[0]}.stats.txt')
-
-    # Extract the discordant paired-end alignments
-    pipeline.transform(
-        task_func=stages.extract_discordant_alignments,
-        name='extract_discordant_alignments',
-        input=output_from('align_bwa'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
-        output='{path[0]}/{sample[0]}.discordants.unsorted.bam')
-
-    # Extract split-read alignments
-    pipeline.transform(
-        task_func=stages.extract_split_read_alignments,
-        name='extract_split_read_alignments',
-        input=output_from('align_bwa'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
-        output='{path[0]}/{sample[0]}.splitters.unsorted.bam')
-
-    # Sort discordant reads.
-    # Samtools annoyingly takes the prefix of the output bam name as its argument.
-    # So we pass this as an extra argument. However Ruffus needs to know the full name
-    # of the output bam file, so we pass that as the normal output parameter.
-    pipeline.transform(
-        task_func=stages.sort_bam,
-        name='sort_discordants',
-        input=output_from('extract_discordant_alignments'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.unsorted.bam'),
-        extras=['{path[0]}/{sample[0]}.discordants'],
-        output='{path[0]}/{sample[0]}.discordants.bam')
-
-    # Index the sorted discordant bam with samtools 
-    # pipeline.transform(
-    #   task_func=stages.index_bam,
-    #   name='index_discordants',
-    #   input=output_from('sort_discordants'),
-    #   filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.bam'),
-    #   output='{path[0]}/{sample[0]}.discordants.bam.bai')
-
-    # Sort discordant reads 
-    # Samtools annoyingly takes the prefix of the output bam name as its argument.
-    # So we pass this as an extra argument. However Ruffus needs to know the full name
-    # of the output bam file, so we pass that as the normal output parameter.
-    pipeline.transform(
-        task_func=stages.sort_bam,
-        name='sort_splitters',
-        input=output_from('extract_split_read_alignments'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.unsorted.bam'),
-        extras=['{path[0]}/{sample[0]}.splitters'],
-        output='{path[0]}/{sample[0]}.splitters.bam')
-
-    # Index the sorted splitters bam with samtools 
-    # pipeline.transform(
-    #    task_func=stages.index_bam,
-    #    name='index_splitters',
-    #    input=output_from('sort_splitters'),
-    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.bam'),
-    #    output='{path[0]}/{sample[0]}.splitters.bam.bai')
-
-    # Call structural variants with lumpy
-    (pipeline.transform(
-        task_func=stages.structural_variants_lumpy,
-        name='structural_variants_lumpy',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        add_inputs=add_inputs(['{path[0]}/{sample[0]}.splitters.bam', '{path[0]}/{sample[0]}.discordants.bam']),
-        output='{path[0]}/{sample[0]}.lumpy.vcf')
-        .follows('index_alignment')
-        .follows('sort_splitters')
-        .follows('sort_discordants'))
-
-    # Call genotypes on lumpy output using SVTyper 
-    #(pipeline.transform(
-    #    task_func=stages.genotype_svtyper,
-    #    name='genotype_svtyper',
-    #    input=output_from('structural_variants_lumpy'),
-    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).lumpy.vcf'),
-    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.sorted.bam', '{path[0]}/{sample[0]}.splitters.bam']),
-    #    output='{path[0]}/{sample[0]}.svtyper.vcf')
-    #    .follows('align_bwa')
-    #    .follows('sort_splitters')
-    #    .follows('index_alignment')
-    #    .follows('index_splitters')
-    #    .follows('index_discordants'))
-
-    # Call SVs with Socrates
-    (pipeline.transform(
-        task_func=stages.structural_variants_socrates,
-        name='structural_variants_socrates',
-        input=output_from('sort_alignment'),
-        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-        # output goes to {path[0]}/socrates/
-        output='{path[0]}/socrates/results_Socrates_paired_{sample[0]}.sorted_long_sc_l25_q5_m5_i95.txt',
-        extras=['{path[0]}']))
-
+#
+#    # Extract MMR genes from the sorted BAM file
+#    pipeline.transform(
+#        task_func=stages.extract_genes_bedtools,
+#        name='extract_genes_bedtools',
+#        input=output_from('sort_alignment'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#        output='{path[0]}/{sample[0]}.mmr.bam')
+#
+#    # Extract selected chromosomes from the sorted BAM file
+#    pipeline.transform(
+#        task_func=stages.extract_chromosomes_samtools,
+#        name='extract_chromosomes_samtools',
+#        input=output_from('sort_alignment'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#        output='{path[0]}/{sample[0]}.chroms.bam')
+#
+#    # Index the MMR genes bam file with samtools 
+#    pipeline.transform(
+#        task_func=stages.index_bam,
+#        name='index_mmr_alignment',
+#        input=output_from('extract_genes_bedtools'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).mmr.bam'),
+#        output='{path[0]}/{sample[0]}.mmr.bam.bai')
+#
+#    # Compute depth of coverage of the alignment with GATK DepthOfCoverage
+#    #pipeline.transform(
+#    #    task_func=stages.alignment_coverage_gatk,
+#    #    name='alignment_coverage_gatk',
+#    #    input=output_from('sort_alignment'),
+#    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#    #    add_inputs=add_inputs([reference_file]),
+#    #    output='{path[0]}/{sample[0]}.coverage_summary',
+#    #    extras=['{path[0]}/{sample[0]}_coverage'])
+#
+#    # Index the alignment with samtools 
+#    pipeline.transform(
+#        task_func=stages.index_bam,
+#        name='index_alignment',
+#        input=output_from('sort_alignment'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#        output='{path[0]}/{sample[0]}.sorted.bam.bai')
+#
+#    # Generate alignment stats with bamtools
+#    pipeline.transform(
+#        task_func=stages.bamtools_stats,
+#        name='bamtools_stats',
+#        input=output_from('align_bwa'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+#        output='{path[0]}/{sample[0]}.stats.txt')
+#
+#    # Extract the discordant paired-end alignments
+#    pipeline.transform(
+#        task_func=stages.extract_discordant_alignments,
+#        name='extract_discordant_alignments',
+#        input=output_from('align_bwa'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+#        output='{path[0]}/{sample[0]}.discordants.unsorted.bam')
+#
+#    # Extract split-read alignments
+#    pipeline.transform(
+#        task_func=stages.extract_split_read_alignments,
+#        name='extract_split_read_alignments',
+#        input=output_from('align_bwa'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).bam'),
+#        output='{path[0]}/{sample[0]}.splitters.unsorted.bam')
+#
+#    # Sort discordant reads.
+#    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+#    # So we pass this as an extra argument. However Ruffus needs to know the full name
+#    # of the output bam file, so we pass that as the normal output parameter.
+#    pipeline.transform(
+#        task_func=stages.sort_bam,
+#        name='sort_discordants',
+#        input=output_from('extract_discordant_alignments'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.unsorted.bam'),
+#        extras=['{path[0]}/{sample[0]}.discordants'],
+#        output='{path[0]}/{sample[0]}.discordants.bam')
+#
+#    # Index the sorted discordant bam with samtools 
+#    # pipeline.transform(
+#    #   task_func=stages.index_bam,
+#    #   name='index_discordants',
+#    #   input=output_from('sort_discordants'),
+#    #   filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).discordants.bam'),
+#    #   output='{path[0]}/{sample[0]}.discordants.bam.bai')
+#
+#    # Sort discordant reads 
+#    # Samtools annoyingly takes the prefix of the output bam name as its argument.
+#    # So we pass this as an extra argument. However Ruffus needs to know the full name
+#    # of the output bam file, so we pass that as the normal output parameter.
+#    pipeline.transform(
+#        task_func=stages.sort_bam,
+#        name='sort_splitters',
+#        input=output_from('extract_split_read_alignments'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.unsorted.bam'),
+#        extras=['{path[0]}/{sample[0]}.splitters'],
+#        output='{path[0]}/{sample[0]}.splitters.bam')
+#
+#    # Index the sorted splitters bam with samtools 
+#    # pipeline.transform(
+#    #    task_func=stages.index_bam,
+#    #    name='index_splitters',
+#    #    input=output_from('sort_splitters'),
+#    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).splitters.bam'),
+#    #    output='{path[0]}/{sample[0]}.splitters.bam.bai')
+#
+#    # Call structural variants with lumpy
+#    (pipeline.transform(
+#        task_func=stages.structural_variants_lumpy,
+#        name='structural_variants_lumpy',
+#        input=output_from('sort_alignment'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#        add_inputs=add_inputs(['{path[0]}/{sample[0]}.splitters.bam', '{path[0]}/{sample[0]}.discordants.bam']),
+#        output='{path[0]}/{sample[0]}.lumpy.vcf')
+#        .follows('index_alignment')
+#        .follows('sort_splitters')
+#        .follows('sort_discordants'))
+#
+#    # Call genotypes on lumpy output using SVTyper 
+#    #(pipeline.transform(
+#    #    task_func=stages.genotype_svtyper,
+#    #    name='genotype_svtyper',
+#    #    input=output_from('structural_variants_lumpy'),
+#    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).lumpy.vcf'),
+#    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.sorted.bam', '{path[0]}/{sample[0]}.splitters.bam']),
+#    #    output='{path[0]}/{sample[0]}.svtyper.vcf')
+#    #    .follows('align_bwa')
+#    #    .follows('sort_splitters')
+#    #    .follows('index_alignment')
+#    #    .follows('index_splitters')
+#    #    .follows('index_discordants'))
+#
+#    # Call SVs with Socrates
+#    (pipeline.transform(
+#        task_func=stages.structural_variants_socrates,
+#        name='structural_variants_socrates',
+#        input=output_from('sort_alignment'),
+#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#        # output goes to {path[0]}/socrates/
+#        output='{path[0]}/socrates/results_Socrates_paired_{sample[0]}.sorted_long_sc_l25_q5_m5_i95.txt',
+#        extras=['{path[0]}']))
+#
     # Call DELs with DELLY 
     pipeline.merge(
         task_func=stages.deletions_delly,
@@ -284,31 +285,38 @@ def make_pipeline(state):
         input=output_from('sort_alignment'),
         output='delly.TRA.vcf')
 
-    # Join both read pair files using gustaf_mate_joining
-    #pipeline.transform(
-    #    task_func=stages.gustaf_mate_joining,
-    #    name='gustaf_mate_joining',
-    #    input=output_from('fastq_to_fasta'),
-    #    # Match the R1 (read 1) FASTA file and grab the path and sample name. 
-    #    # This will be the first input to the stage.
-    #    # We assume the sample name may consist of only alphanumeric
-    #    # characters.
-    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+)_R1.fasta'),
-    #    # Add one more input to the stage:
-    #    #    1. The corresponding R2 FASTA file
-    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}_R2.fasta']),
-    #    output='{path[0]}/{sample[0]}.joined_mates.fasta')
+    # Call INSs with DELLY 
+    pipeline.merge(
+        task_func=stages.insertions_delly,
+        name='insertions_delly',
+        input=output_from('sort_alignment'),
+        output='delly.INS.vcf')
 
-
-    # Call structural variants with pindel 
-    #(pipeline.transform(
-    #    task_func=stages.structural_variants_pindel,
-    #    name='structural_variants_pindel',
-    #    input=output_from('sort_alignment'),
-    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.pindel_config.txt', reference_file]),
-    #    output='{path[0]}/{sample[0]}.pindel')
-    #    .follows('index_reference_bwa')
-    #    .follows('index_reference_samtools'))
+#    # Join both read pair files using gustaf_mate_joining
+#    #pipeline.transform(
+#    #    task_func=stages.gustaf_mate_joining,
+#    #    name='gustaf_mate_joining',
+#    #    input=output_from('fastq_to_fasta'),
+#    #    # Match the R1 (read 1) FASTA file and grab the path and sample name. 
+#    #    # This will be the first input to the stage.
+#    #    # We assume the sample name may consist of only alphanumeric
+#    #    # characters.
+#    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+)_R1.fasta'),
+#    #    # Add one more input to the stage:
+#    #    #    1. The corresponding R2 FASTA file
+#    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}_R2.fasta']),
+#    #    output='{path[0]}/{sample[0]}.joined_mates.fasta')
+#
+#
+#    # Call structural variants with pindel 
+#    #(pipeline.transform(
+#    #    task_func=stages.structural_variants_pindel,
+#    #    name='structural_variants_pindel',
+#    #    input=output_from('sort_alignment'),
+#    #    filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+#    #    add_inputs=add_inputs(['{path[0]}/{sample[0]}.pindel_config.txt', reference_file]),
+#    #    output='{path[0]}/{sample[0]}.pindel')
+#    #    .follows('index_reference_bwa')
+#    #    .follows('index_reference_samtools'))
 
     return pipeline

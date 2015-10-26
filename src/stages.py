@@ -113,11 +113,12 @@ class Stages(object):
     # Samtools annoyingly takes the prefix of the output bam name as its argument.
     # So we pass this as an extra argument. However Ruffus needs to know the full name
     # of the output bam file, so we pass that as the normal output parameter.
-    def sort_bam(self, bam_in, sorted_bam_out, sorted_bam_prefix):
+    def sort_bam_samtools(self, bam_in, sorted_bam_out, sorted_bam_prefix):
         '''Sort the reads in a bam file using samtools'''
-        command = 'samtools sort {input_bam} {output_bam_prefix}' \
-                  .format(input_bam=bam_in, output_bam_prefix=sorted_bam_prefix)
-        run_stage(self.state, 'sort_bam', command)
+        cores = self.state.config.get_stage_option('sort_bam_samtools', 'cores')
+        command = 'samtools sort -@ {cores} {input_bam} {output_bam_prefix}' \
+                  .format(cores=cores, input_bam=bam_in, output_bam_prefix=sorted_bam_prefix)
+        run_stage(self.state, 'sort_bam_samtools', command)
 
     def sort_bam_sambamba(self, bam_in, sorted_bam_out):
         '''Sort the reads in a bam file using sambamba'''
@@ -179,7 +180,7 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
         bams_args = ' '.join(bams_in)
         threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
         exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
-        command = 'OMP_NUM_THREADS={threads} delly -t DEL -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+        command = 'OMP_NUM_THREADS={threads} /mnt/nfs/code/delly/src/delly -t DEL -x {exclude} -o {vcf_out} -g {reference} {bams}' \
             .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
         run_stage(self.state, 'structural_variants_delly', command)
 
@@ -188,7 +189,7 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
         bams_args = ' '.join(bams_in)
         threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
         exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
-        command = 'OMP_NUM_THREADS={threads} delly -t DUP -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+        command = 'OMP_NUM_THREADS={threads} /mnt/nfs/code/delly/src/delly -t DUP -x {exclude} -o {vcf_out} -g {reference} {bams}' \
             .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
         run_stage(self.state, 'structural_variants_delly', command)
 
@@ -197,7 +198,7 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
         bams_args = ' '.join(bams_in)
         threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
         exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
-        command = 'OMP_NUM_THREADS={threads} delly -t INV -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+        command = 'OMP_NUM_THREADS={threads} /mnt/nfs/code/delly/src/delly -t INV -x {exclude} -o {vcf_out} -g {reference} {bams}' \
             .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
         run_stage(self.state, 'structural_variants_delly', command)
 
@@ -206,7 +207,16 @@ Socrates all -t {threads} --bowtie2_threads {threads} --bowtie2_db {bowtie2_ref_
         bams_args = ' '.join(bams_in)
         threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
         exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
-        command = 'OMP_NUM_THREADS={threads} delly -t TRA -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+        command = 'OMP_NUM_THREADS={threads} /mnt/nfs/code/delly/src/delly -t TRA -x {exclude} -o {vcf_out} -g {reference} {bams}' \
+            .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
+        run_stage(self.state, 'structural_variants_delly', command)
+
+    def insertions_delly(self, bams_in, vcf_out):
+        '''Call insertions with delly'''
+        bams_args = ' '.join(bams_in)
+        threads = self.state.config.get_stage_option('structural_variants_delly', 'cores') 
+        exclude = self.state.config.get_stage_option('structural_variants_delly', 'exclude') 
+        command = 'OMP_NUM_THREADS={threads} /mnt/nfs/code/delly/src/delly -t INS -x {exclude} -o {vcf_out} -g {reference} {bams}' \
             .format(threads=threads, exclude=exclude, vcf_out=vcf_out, reference=self.reference, bams=bams_args)
         run_stage(self.state, 'structural_variants_delly', command)
 

@@ -149,14 +149,14 @@ def make_pipeline(state):
 #    #    output='{path[0]}/{sample[0]}.coverage_summary',
 #    #    extras=['{path[0]}/{sample[0]}_coverage'])
 #
-#    # Index the alignment with samtools 
-#    pipeline.transform(
-#        task_func=stages.index_bam,
-#        name='index_alignment',
-#        input=output_from('sort_alignment'),
-#        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
-#        output='{path[0]}/{sample[0]}.sorted.bam.bai')
-#
+    # Index the alignment with samtools 
+    pipeline.transform(
+        task_func=stages.index_bam,
+        name='index_alignment',
+        input=output_from('sort_alignment'),
+        filter=formatter('.+/(?P<sample>[a-zA-Z0-9]+).sorted.bam'),
+        output='{path[0]}/{sample[0]}.sorted.bam.bai')
+
 #    # Generate alignment stats with bamtools
 #    pipeline.transform(
 #        task_func=stages.bamtools_stats,
@@ -258,39 +258,44 @@ def make_pipeline(state):
 #        extras=['{path[0]}']))
 #
     # Call DELs with DELLY 
-    pipeline.merge(
+    (pipeline.merge(
         task_func=stages.deletions_delly,
         name='deletions_delly',
         input=output_from('sort_alignment'),
         output='delly.DEL.vcf')
+        .follows('index_alignment'))
 
     # Call DUPs with DELLY 
-    pipeline.merge(
+    (pipeline.merge(
         task_func=stages.duplications_delly,
         name='duplications_delly',
         input=output_from('sort_alignment'),
         output='delly.DUP.vcf')
+        .follows('index_alignment'))
 
     # Call INVs with DELLY 
-    pipeline.merge(
+    (pipeline.merge(
         task_func=stages.inversions_delly,
         name='inversions_delly',
         input=output_from('sort_alignment'),
         output='delly.INV.vcf')
+        .follows('index_alignment'))
 
     # Call TRAs with DELLY 
-    pipeline.merge(
+    (pipeline.merge(
         task_func=stages.translocations_delly,
         name='translocations_delly',
         input=output_from('sort_alignment'),
         output='delly.TRA.vcf')
+        .follows('index_alignment'))
 
     # Call INSs with DELLY 
-    pipeline.merge(
+    (pipeline.merge(
         task_func=stages.insertions_delly,
         name='insertions_delly',
         input=output_from('sort_alignment'),
         output='delly.INS.vcf')
+        .follows('index_alignment'))
 
 #    # Join both read pair files using gustaf_mate_joining
 #    #pipeline.transform(
